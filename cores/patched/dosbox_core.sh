@@ -33,8 +33,13 @@ core_pre_build() {
 # PS5 test programs. CC/CXX/AR/RANLIB from _common.sh still win over the
 # triplet-prefixed names; PKGCONFIG keeps the host pkg-config, which finds the
 # dependencies just built under deps_bin.
+# BUNDLED_SDL=1 builds its own SDL 1.2 and SDL_net from deps/ (as dosbox_svn
+# does); with the default 0 it expects them installed, and the sysroot only has
+# SDL2. (The "libmpg123 not found" messages early in the build are harmless:
+# the makefile asks pkg-config before the bundled mpg123 has been built.)
 MAKE_ARGS=(
     WITH_DYNAREC=
+    BUNDLED_SDL=1
     TARGET_TRIPLET=x86_64-unknown-freebsd
     PKGCONFIG=pkg-config
 )
