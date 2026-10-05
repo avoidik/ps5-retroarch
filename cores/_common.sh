@@ -19,7 +19,7 @@
 # Variables:
 #   CORE           core name; also names the .so and the .info     (required)
 #   REPO           GitHub owner/repo, or gitlab.com/owner/repo     (required)
-#   BRANCH         branch to fetch                                (default master)
+#   BRANCH         branch to fetch, or a commit hash to pin       (default master)
 #   FETCH          "tarball", or "git" to clone       (default tarball; a source
 #                  tree with a .gitmodules is re-fetched with git automatically)
 #   MAKE_DIR       directory holding the libretro makefile         (default .)
@@ -49,6 +49,12 @@ fi
 source "${PS5_PAYLOAD_SDK}/toolchain/prospero.sh" || {
     return 1 2>/dev/null || exit 1
 }
+
+# prospero.sh exports DESTDIR=<sysroot> so SDK libraries install into it. A core
+# never installs anything there, but some build their bundled dependencies with
+# `make install`/`cmake --install` into the source tree (dosbox_core's
+# deps_bin/), and DESTDIR silently re-roots that into the sysroot instead.
+unset DESTDIR
 
 # This file lives in cores/; everything stages into the payload root above it.
 CORES_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
@@ -112,7 +118,11 @@ fetch_core_source() {
     local repo="${REPO:?REPO is not set}"
     local branch="${BRANCH:-master}"
     local fetch="${FETCH:-tarball}"
-    local host="github.com" path="$repo" archive
+    local host="github.com" path="$repo" archive ref
+
+    # A hex string of 7-40 characters is a commit pin, not a branch name.
+    local pinned=0
+    [[ "$branch" =~ ^[0-9a-f]{7,40}$ ]] && pinned=1
 
     # REPO is owner/repo on GitHub unless it names its host.
     if [[ "$repo" == gitlab.com/* ]]; then
@@ -127,7 +137,11 @@ fetch_core_source() {
         if [[ "$host" == "gitlab.com" ]]; then
             archive="https://gitlab.com/${path}/-/archive/${branch}/${path##*/}-${branch}.tar.gz"
         else
-            archive="https://github.com/${path}/archive/refs/heads/${branch}.tar.gz"
+            # refs/heads/ keeps a branch from being mistaken for a tag; a commit
+            # has no such prefix.
+            ref="refs/heads/${branch}"
+            (( pinned )) && ref="$branch"
+            archive="https://github.com/${path}/archive/${ref}.tar.gz"
         fi
         "${WGET[@]}" -O "$TEMPDIR/$core.tar.gz" "$archive" || return 1
         tar xf "$TEMPDIR/$core.tar.gz" -C "$TEMPDIR" || return 1
@@ -149,8 +163,15 @@ fetch_core_source() {
     fi
 
     if [[ "$fetch" == "git" ]]; then
-        git_clone_retry --depth 1 --recursive --shallow-submodules --branch "$branch" \
-            "https://${host}/${path}.git" "$TEMPDIR/$core" || return 1
+        if (( pinned )); then
+            # --branch cannot name a commit: clone, then check it out.
+            git_clone_retry "https://${host}/${path}.git" "$TEMPDIR/$core" || return 1
+            git -C "$TEMPDIR/$core" checkout --quiet "$branch" || return 1
+            git -C "$TEMPDIR/$core" submodule update --init --recursive || return 1
+        else
+            git_clone_retry --depth 1 --recursive --shallow-submodules --branch "$branch" \
+                "https://${host}/${path}.git" "$TEMPDIR/$core" || return 1
+        fi
         SRC="$TEMPDIR/$core"
     fi
 }
@@ -182,8 +203,19 @@ core_defines() {
     # invocation, that second line makes the test conclude "not clang", and the
     # GCC branch then adds flags clang rejects (parallel_n64 picks up -fipa-pta
     # and every compile fails).
+    #
+    # -I shims/include: drop-in replacements for headers the FreeBSD sysroot
+    # refuses (<malloc.h> is an #error there); see shims/include/.
+    #
+    # -Wno-error=incompatible-function-pointer-types: clang 16+ makes this an
+    # error, gcc - which libretro's buildbot uses - only warns, and older C
+    # cores (bluemsx's ROM mappers) pass handlers taking a typed pointer where
+    # void * is expected. The calling convention is the same, so it stays a
+    # warning. Undeclared functions stay errors: those do break at run time.
     local defines="-DCLOCK_REALTIME=0 -DCLOCK_MONOTONIC=4"
+    defines+=" -I${ROOT_DIR}/shims/include"
     defines+=" -include${ROOT_DIR}/shims/ps5-pthread-np.h"
+    defines+=" -Wno-error=incompatible-function-pointer-types"
     defines+=" -Wno-unused-command-line-argument ${EXTRA_DEFINES:-}"
     echo "$defines"
 }

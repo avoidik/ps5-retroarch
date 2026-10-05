@@ -10,12 +10,12 @@ described at the end to refresh them.
 
 | Item | Value |
 |---|---|
-| Cores shipped | **115**: 94 typical (`cores/typical/table.txt`), 14 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
+| Cores shipped | **115**: 89 typical (`cores/typical/table.txt`), 19 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
 | Added on 2026-10-05 | 81 software-rendered emulators, not yet built in CI at the time of writing (see [Emulators added on 2026-10-05](#emulators-added-on-2026-10-05)) |
 | Official Linux x86_64 cores | 244, of which all 115 shipped here are part |
 | Missing from the official set | 129 - see [Coverage](#coverage-against-the-official-distribution) |
-| Pinned to a release | 1 (`dosbox_pure`) |
-| Tracking a branch head | 114 |
+| Pinned | 3: `dosbox_pure` and `stella` to a release, `quasi88` to a commit (upstream's latest does not compile here) |
+| Tracking a branch head | 112 |
 
 ## Recipe categories
 
@@ -24,8 +24,8 @@ Every core is defined in exactly one of three places under `cores/`;
 
 | Category | Location | Cores | What it means |
 |---|---|---|---|
-| typical | `typical/table.txt` | 94 | Upstream source built as is with the shared flags in `_common.sh`: one row naming a repository, makefile path and make arguments. |
-| patched | `patched/<name>.sh` | 14 | Needs a source patch, a build assertion, an `.info` fixup or a non-make build. `parallel_n64`, `picodrive` and `prboom` use `_common.sh`'s make build with hooks (`prboom` through `core_pre_build`, to drop a makefile define); `bsnes` and `bsnes_hd_beta` pass the toolchain through nall's own `compiler` variable; `mgba`, `applewin`, `arduous` and `dirksimple` use `_common.sh`'s CMake build (`build_cmake_libretro_core`); the other five fetch and build on their own. |
+| typical | `typical/table.txt` | 89 | Upstream source built as is with the shared flags in `_common.sh`: one row naming a repository, makefile path and make arguments. |
+| patched | `patched/<name>.sh` | 19 | Needs a source patch, a build assertion, an `.info` fixup or a non-make build. `parallel_n64`, `picodrive`, `prboom`, `mame2003`, `bsnes_hd_beta` and `same_cdi` use `_common.sh`'s make build with hooks (`core_pre_build` patches the makefile for the last four), and `cdi2015` puts the C++ compiler back in `CC`; `bsnes` and `bsnes_hd_beta` pass the toolchain through nall's own `compiler` variable; `mgba`, `applewin`, `arduous`, `dirksimple`, `hatari` and `squirreljme` use `_common.sh`'s CMake build (`build_cmake_libretro_core`); the other five fetch and build on their own. |
 | websrv | `websrv/<name>.sh` | 7 | Taken from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch) (`build-<name>.sh` there), changed as little as possible so upstream changes can be compared directly: the staging path everywhere, plus the compiler flags in `snes9x2010` (see below). `puae2021`'s `key_t` patch is websrv's own. |
 
 The websrv and standalone patched scripts do not use `_common.sh`, so they skip
@@ -127,7 +127,8 @@ is compiled into the core, despite the older core-info note asking for it.
 Generated from libretro-super's `recipes/linux/cores-linux-x64-generic`: every
 software-rendered, non-experimental emulator in the official x86_64 build with a
 make or CMake recipe there, except the full MAME/HBMAME builds and `rustynes`
-(Rust; no Rust toolchain targets the PS5). None had been built for this target
+(Rust; no Rust toolchain targets the PS5). `stella` is pinned to the 7.0
+release: its `master` needs a newer C++ compiler than the SDK's clang 18. None had been built for this target
 when they were added, so the first CI runs decide which need more work.
 
 | Core | System | Source | Branch | Recipe | Licence |
@@ -139,14 +140,14 @@ when they were added, so the first CI runs decide which need more work.
 | `fbalpha2012_cps3` | Arcade (FB Alpha 2012 CPS-3) | libretro/fbalpha2012_cps3 | master | typical | Non-commercial |
 | `fbalpha2012` | Arcade (FB Alpha 2012) | libretro/fbalpha2012 | master | typical | Non-commercial |
 | `mame2000` | Arcade (MAME 2000) | libretro/mame2000-libretro | master | typical | MAME |
-| `mame2003` | Arcade (MAME 2003) | libretro/mame2003-libretro | master | typical | MAME |
+| `mame2003` | Arcade (MAME 2003) | libretro/mame2003-libretro | master | patched | MAME |
 | `arduous` | Arduboy (Arduous) | libretro/arduous | main | patched | GPLv3 |
 | `stella2014` | Atari - 2600 (Stella 2014) | libretro/stella2014-libretro | master | typical | GPLv2 |
-| `stella` | Atari - 2600 (Stella) | stella-emu/stella | master | typical | GPLv2 |
+| `stella` | Atari - 2600 (Stella) | stella-emu/stella | **7.0** (d55b1aec0d, pinned) | typical | GPLv2 |
 | `atari800` | Atari - 400/800/600XL/800XL/130XE/5200 (Atari800) | libretro/libretro-atari800 | master | typical | GPLv2 |
 | `a5200` | Atari - 5200 (a5200) | libretro/a5200 | master | typical | GPLv2 |
 | `mednafen_lynx` | Atari - Lynx (Beetle Lynx) | libretro/beetle-lynx-libretro | master | typical | Zlib / GPLv2 |
-| `hatari` | Atari - ST / STE / TT / Falcon (Hatari) | libretro/hatari | master | typical | GPLv2 |
+| `hatari` | Atari - ST / STE / TT / Falcon (Hatari) | libretro/hatari | main | patched | GPLv2 |
 | `tamalibretro` | Bandai - Tamagotchi P1 (TamaLIBretro) | celerizer/tamalibretro | master | typical | GPL-2.0 |
 | `jollycv` | ColecoVision/CreatiVision/My Vision (JollyCV) | libretro/jollycv | master | typical | BSD-3-Clause, MIT |
 | `vice_x128` | Commodore - C128 (VICE x128) | libretro/vice-libretro | master | typical | GPLv2 |
@@ -163,7 +164,7 @@ when they were added, so the first CI runs decide which need more work.
 | `emuscv` | EPOCH/YENO Super Cassette Vision | gitlab.com/MaaaX-EmuSCV/libretro-emuscv | master | typical | GPLv3 |
 | `freechaf` | Fairchild - ChannelF (FreeChaF) | libretro/FreeChaF | master | typical | GPLv3 |
 | `gw` | Handheld Electronic (GW) | libretro/gw-libretro | master | typical | zlib |
-| `squirreljme` | Java ME (SquirrelJME) | XerTheSquirrel/SquirrelJME | trunk | typical | MPL-2.0 |
+| `squirreljme` | Java ME (SquirrelJME) | XerTheSquirrel/SquirrelJME | trunk | patched | MPL-2.0 |
 | `dirksimple` | Laserdisc arcade game (DirkSimple) | icculus/DirkSimple | main | patched | zlib |
 | `o2em` | Magnavox - Odyssey2 / Philips Videopac+ (O2EM) | libretro/libretro-o2em | master | typical | Artistic License |
 | `freeintv` | Mattel - Intellivision (FreeIntv) | libretro/FreeIntv | master | typical | GPLv2+ |
@@ -171,7 +172,7 @@ when they were added, so the first CI runs decide which need more work.
 | `bluemsx` | MSX/SVI/ColecoVision/SG-1000 (blueMSX) | libretro/blueMSX-libretro | master | typical | GPLv2 |
 | `mednafen_pce` | NEC - PC Engine / SuperGrafx / CD (Beetle PCE) | libretro/beetle-pce-libretro | master | typical | GPLv2 |
 | `mednafen_supergrafx` | NEC - PC Engine SuperGrafx (Beetle SuperGrafx) | libretro/beetle-supergrafx-libretro | master | typical | GPLv2 |
-| `quasi88` | NEC - PC-88 series (QUASI88) | libretro/quasi88-libretro | master | typical | BSD 3-Clause and MAME non-commercial |
+| `quasi88` | NEC - PC-88 series (QUASI88) | libretro/quasi88-libretro | **d43ef693eb** (pinned) | typical | BSD 3-Clause and MAME non-commercial |
 | `np2kai` | NEC - PC-98 (Neko Project II Kai) | libretro/NP2kai | master | typical | MIT |
 | `nekop2` | NEC - PC-98 (Neko Project II) | libretro/libretro-meowPC98 | master | typical | MIT |
 | `mednafen_pcfx` | NEC - PC-FX (Beetle PC-FX) | libretro/beetle-pcfx-libretro | master | typical | GPLv2 |
@@ -193,8 +194,8 @@ when they were added, so the first CI runs decide which need more work.
 | `mesen-s` | Nintendo - SNES / SFC / Game Boy / Color (Mesen-S) | libretro/Mesen-S | master | typical | GPLv3 |
 | `oberon` | Oberon RISC Emulator | libretro/oberon-risc-emu | master | typical | ISC |
 | `mu` | Palm OS (Mu) | libretro/Mu | master | typical | CC BY-NC 3.0 US (Non-commercial) |
-| `same_cdi` | Philips - CDi (SAME CDi) | libretro/same_cdi | master | typical | GPLv2+ |
-| `cdi2015` | Philips CDi (CDi 2015) | libretro/mame2015-libretro | master | typical | GPLv2+ |
+| `same_cdi` | Philips - CDi (SAME CDi) | libretro/same_cdi | master | patched | GPLv2+ |
+| `cdi2015` | Philips CDi (CDi 2015) | libretro/mame2015-libretro | master | patched | GPLv2+ |
 | `retro8` | PICO-8 (Retro8) | libretro/retro8 | master | typical | GPLv3 |
 | `clownmdemu` | Sega - MD/CD (ClownMDEmu) | Clownacy/clownmdemu-libretro | master | typical | AGPLv3 |
 | `smsplus` | Sega - MS/GG (SMS Plus GX) | libretro/smsplus-gx | master | typical | GPLv2 |
@@ -248,6 +249,23 @@ explain most of the per-core scripts:
   `snes9x2010` also takes `_common.sh`'s `CLOCK_REALTIME`/`CLOCK_MONOTONIC`
   defines, because its `rthreads.c` pins `_POSIX_C_SOURCE 199309`, which hides
   them. That makes it the one websrv script with a compiler-flag change.
+  The shim declares only the function and pulls in nothing but
+  `<sys/_pthreadtypes.h>`: an earlier version included `<pthread.h>`, which made
+  every CMake `check_function_exists` probe fail and left `mgba` defining its own
+  `localtime_r`.
+- **Glibc-only headers and clang 18's stricter defaults.** `<malloc.h>` is an
+  `#error` on this libc, so `_common.sh` puts `shims/include/` (a `malloc.h`
+  that includes `<stdlib.h>`) first on the include path (`81`). It also keeps
+  incompatible function-pointer types a warning, as gcc does (`bluemsx`'s ROM
+  mappers). `blastem` force-includes `<sys/socket.h>` and `<sys/endian.h>`,
+  which glibc pulls in implicitly. `mame2003` gets `mame2003_plus`'s three
+  makefile fixes. `shims/include/` also has an `endian.h` with glibc's
+  `__BYTE_ORDER` names (`mesen`) and an empty `sys/io.h` (`emuscv` includes the
+  x86 port-I/O header without using it).
+- **The SDK environment exports `DESTDIR`** (its sysroot) for its own library
+  builds. `_common.sh` unsets it, or a core that `make install`s its bundled
+  dependencies into its own tree (`dosbox_core`) has them re-rooted into the
+  sysroot.
 - **No physical CD-ROM.** Built with `HAVE_CDROM=0`; disc games load from images.
 - **Loadability.** Every staged `.so` must export the libretro entry points,
   import `libkernel_web.sprx` and not import `libkernel_sys.sprx`. See

@@ -54,7 +54,7 @@ repository is that port plus extra cores; all of the porting work is his.
 | `mame2003` | Arcade (MAME 2003) |
 | `arduous` | Arduboy (Arduous) |
 | `stella2014` | Atari - 2600 (Stella 2014) |
-| `stella` | Atari - 2600 (Stella) |
+| `stella` | Atari - 2600 (Stella 7.0) |
 | `atari800` | Atari - 400/800/600XL/800XL/130XE/5200 (Atari800) |
 | `a5200` | Atari - 5200 (a5200) |
 | `mednafen_lynx` | Atari - Lynx (Beetle Lynx) |
@@ -178,8 +178,8 @@ The core recipes live in `cores/`, grouped by how each core is built:
 
 | Path | Holds |
 |---|---|
-| `cores/typical/table.txt` | 94 cores built from upstream source as is - one row each: a repository, a makefile path, make arguments |
-| `cores/patched/<name>.sh` | 14 cores that need more: a source patch, a build assertion, an `.info` fixup, or a non-make build (`mgba`, `applewin`, `arduous` and `dirksimple` use CMake) |
+| `cores/typical/table.txt` | 89 cores built from upstream source as is - one row each: a repository, a makefile path, make arguments |
+| `cores/patched/<name>.sh` | 19 cores that need more: a source patch, a build assertion, an `.info` fixup, or a non-make build (`mgba`, `applewin`, `arduous`, `dirksimple`, `hatari` and `squirreljme` use CMake) |
 | `cores/websrv/<name>.sh` | 7 cores whose scripts come from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch), kept close to the originals so upstream changes are easy to compare; local changes are marked in each script |
 | `cores/_common.sh` | shared fetch, cross-compile, verify and stage logic |
 | `cores/_matrix.py` | the core list as a build matrix for the release workflow |
@@ -230,7 +230,7 @@ The cores are **not** all under the same licence:
 
 | Core | Licence |
 |---|---|
-| `fceumm`, `nestopia`, `gambatte`, `mednafen_gba`, `mednafen_psx`, `mednafen_pce_fast`, `mednafen_vb`, `mednafen_wswan`, `mednafen_ngp`, `pcsx_rearmed`, `desmume2015`, `parallel_n64`, `yabause`, `stella2023`, `prosystem`, `puae`, `puae2021`, `vice_x64`, `dosbox_pure`, `prboom`, `a5200`, `applewin`, `atari800`, `bluemsx`, `cap32`, `dosbox_core`, `dosbox_svn`, `gpsp`, `hatari`, `mednafen_pce`, `mednafen_pcfx`, `mednafen_saturn`, `mednafen_supergrafx`, `numero`, `race`, `smsplus`, `stella`, `stella2014`, `tamalibretro`, `tgbdual`, `vba_next`, `vbam`, `vice_x128`, `vice_x64sc`, `vice_xcbm2`, `vice_xcbm5x0`, `vice_xpet`, `vice_xplus4`, `vice_xscpu64`, `vice_xvic` | GPLv2 |
+| `fceumm`, `nestopia`, `gambatte`, `mednafen_gba`, `mednafen_psx`, `mednafen_pce_fast`, `mednafen_vb`, `mednafen_wswan`, `mednafen_ngp`, `pcsx_rearmed`, `desmume2015`, `parallel_n64`, `yabause`, `stella2023`, `prosystem`, `puae`, `puae2021`, `vice_x64`, `dosbox_pure`, `prboom`, `a5200`, `applewin`, `atari800`, `bluemsx`, `cap32`, `dosbox_core`, `dosbox_svn`, `gpsp`, `hatari`, `mednafen_pce`, `mednafen_pcfx`, `mednafen_saturn`, `mednafen_supergrafx`, `numero`, `race`, `smsplus`, `stella2014`, `tamalibretro`, `tgbdual`, `vba_next`, `vbam`, `vice_x128`, `vice_x64sc`, `vice_xcbm2`, `vice_xcbm5x0`, `vice_xpet`, `vice_xplus4`, `vice_xscpu64`, `vice_xvic`, `stella` | GPLv2 |
 | `virtualjaguar`, `81`, `arduous`, `blastem`, `bsnes`, `bsnes_hd_beta`, `dice`, `emuscv`, `freechaf`, `fuse`, `gearboy`, `gearsystem`, `mesen`, `mesen-s`, `pokemini`, `retro8`, `theodore` | GPLv3 |
 | `mgba`, `squirreljme` | MPL 2.0 |
 | `handy`, `dirksimple`, `gw` | Zlib |

@@ -16,7 +16,7 @@
 #   makefile    empty means Makefile
 #   make args   later arguments win, so these can override _common.sh's own
 #               (platform=unix, CC, ...) and the makefile's defaults
-#   branch      empty means master
+#   branch      empty means master; a commit hash pins that exact commit
 #
 # Add a core by adding a row. Nothing else needs to change - build-core.sh and
 # the release workflow (via ../_matrix.py) both read this file.
@@ -81,10 +81,12 @@ crocods|libretro/libretro-crocods||||
 # --- Atari --------------------------------------------------------------
 a5200|libretro/a5200||||
 atari800|libretro/libretro-atari800||||
-hatari|libretro/hatari||Makefile.libretro||
 mednafen_lynx|libretro/beetle-lynx-libretro||||
-stella|stella-emu/stella|src/os/libretro|||
 stella2014|libretro/stella2014-libretro||||
+# Current Stella, pinned to the 7.0 release (d55b1aec0d, 2024-10-05): master
+# has since started using C++ the SDK's clang/libc++ 18 cannot compile (alias
+# template argument deduction, floating-point std::from_chars).
+stella|stella-emu/stella|src/os/libretro||||d55b1aec0d
 
 # --- Bandai -------------------------------------------------------------
 tamalibretro|celerizer/tamalibretro||||
@@ -128,8 +130,9 @@ freeintv|libretro/FreeIntv||||
 # download_github_linux64 fetches prebuilt Linux libraries, so it is dropped.
 dosbox_core|libretro/dosbox-core|libretro|Makefile.libretro|WITH_DYNAREC=||libretro
 # No JIT on this target: WITH_DYNAREC= selects the interpreter (the recipe
-# builds the x86_64 recompiler).
-dosbox_svn|libretro/dosbox-svn|libretro|Makefile.libretro|WITH_DYNAREC=||libretro
+# builds the x86_64 recompiler). BUNDLED_SDL=1 builds its own SDL 1.2 and
+# SDL_net: the sysroot only has SDL2.
+dosbox_svn|libretro/dosbox-svn|libretro|Makefile.libretro|WITH_DYNAREC= BUNDLED_SDL=1||libretro
 
 # --- NEC ----------------------------------------------------------------
 mednafen_pce|libretro/beetle-pce-libretro||||
@@ -137,7 +140,10 @@ mednafen_pcfx|libretro/beetle-pcfx-libretro||||
 mednafen_supergrafx|libretro/beetle-supergrafx-libretro||||
 nekop2|libretro/libretro-meowPC98|libretro|Makefile.libretro||
 np2kai|libretro/NP2kai|sdl|Makefile.libretro||
-quasi88|libretro/quasi88-libretro||||
+# Pinned: upstream's 2026-10-02 merge of PR #83 left two consecutive function
+# headers for combo_fake_callback in src/q8tk.c, which no compiler accepts.
+# d43ef693eb (2026-09-26) is the last commit before it.
+quasi88|libretro/quasi88-libretro|||||d43ef693eb
 
 # --- Nintendo -----------------------------------------------------------
 gearboy|drhelius/Gearboy|platforms/libretro|||
@@ -158,19 +164,19 @@ vba_next|libretro/vba-next||Makefile.libretro||
 vbam|libretro/vbam-libretro|src/libretro|||
 
 # --- Oracle Corporation -------------------------------------------------
-squirreljme|XerTheSquirrel/SquirrelJME|ratufacoat|makefilelibretro|||trunk
 
 # --- Palm ---------------------------------------------------------------
 mu|libretro/Mu|libretroBuildSystem|||
 
 # --- Philips ------------------------------------------------------------
-cdi2015|libretro/mame2015-libretro|||PTR64=1 SUBTARGET=cdi|
-same_cdi|libretro/same_cdi||Makefile.libretro||
 
 # --- Sega ---------------------------------------------------------------
 # BlastEm's 68K/Z80 cores are an x86 JIT; NEW_CORE=1 selects the generated
 # cores its aarch64 builds use instead, as there is no JIT on this target.
-blastem|libretro/blastem||Makefile.libretro|NEW_CORE=1||libretro
+# net.c leans on glibc's <netinet/in.h> pulling in <sys/socket.h>, and
+# megawifi.c defines htobe64 itself only for Windows and macOS; FreeBSD has it
+# in <sys/endian.h>. Both headers are force-included.
+blastem|libretro/blastem||Makefile.libretro|NEW_CORE=1|-includesys/socket.h -includesys/endian.h|libretro
 clownmdemu|Clownacy/clownmdemu-libretro||||
 gearsystem|drhelius/Gearsystem|platforms/libretro|||
 genesis_plus_gx_wide|libretro/Genesis-Plus-GX-Wide||Makefile.libretro|||main
@@ -208,7 +214,6 @@ fbalpha2012|libretro/fbalpha2012|svn-current/trunk|makefile.libretro||
 fmsx|libretro/fmsx-libretro||||
 gw|libretro/gw-libretro||||
 mame2000|libretro/mame2000-libretro||||
-mame2003|libretro/mame2003-libretro||||
 oberon|libretro/oberon-risc-emu||Makefile.libretro||
 
 # --- Watara -------------------------------------------------------------
