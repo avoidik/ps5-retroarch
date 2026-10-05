@@ -25,6 +25,11 @@ core_pre_build() {
     fi
 }
 
+# The retro OSD's file and directory code uses glibc's large-file names
+# (stat64, readdir64, open64, pread64) unless SDLMAME_NO64BITIO is set; this
+# libc's plain calls are 64-bit already. mame2010 sets the same define.
+EXTRA_DEFINES="-DSDLMAME_NO64BITIO"
+
 MAKE_ARGS=(
     PTR64=1
     SUBTARGET=cdi

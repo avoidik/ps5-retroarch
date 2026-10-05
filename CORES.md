@@ -264,13 +264,15 @@ explain most of the per-core scripts:
   x86 port-I/O header without using it).
 - **Clang 18 / libc++ 18 strictness.** `_common.sh` also passes `-Wno-register`
   (C++17 dropped `register`; `81`). `cdi2015` drops MAME 2015's
-  `malloc`/`realloc` macros, which break libc++'s own headers, and
+  `malloc`/`realloc` macros, which break libc++'s own headers, and builds with
+  `SDLMAME_NO64BITIO` (glibc's `stat64`/`readdir64`, as in `mame2010`), and
   `mednafen_supafaust` turns off its glibc-only CPU-affinity code.
 - **Bundled dependencies built with autoconf** need to be told they are
   cross-compiling: `dosbox_core` and `dosbox_svn` pass
   `TARGET_TRIPLET=x86_64-unknown-freebsd` (their makefiles hand it to
-  `configure --host`), and the CI runners install autoconf, automake and
-  libtool for the dependencies that run `autogen.sh`.
+  `configure --host`), and the CI runners install autoconf, automake, libtool
+  and libtool-bin (the `libtool` program itself) for the dependencies that run
+  `autogen.sh`.
 - **The SDK environment exports `DESTDIR`** (its sysroot) for its own library
   builds. `_common.sh` unsets it, or a core that `make install`s its bundled
   dependencies into its own tree (`dosbox_core`) has them re-rooted into the
