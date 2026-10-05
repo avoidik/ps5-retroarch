@@ -38,9 +38,14 @@ jobs:
       - id: k
         run: echo "key=ps5-sdk-$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
 
+      - name: Make the SDK path writable for the cache
+        # actions/cache extracts without sudo, and /opt is root-owned on the
+        # runner, so the restore cannot create /opt/ps5-payload-sdk on its own.
+        run: sudo install -d -o "$USER" /opt/ps5-payload-sdk
+
       - name: Restore SDK cache
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /opt/ps5-payload-sdk
           key: ${{ steps.k.outputs.key }}
@@ -65,6 +70,9 @@ jobs:
           # ~180 more). Extracts over / and lands under /opt/ps5-payload-sdk.
           wget -q https://github.com/ps5-payload-dev/pacbrew-repo/releases/latest/download/ps5-payload-dev.tar.gz
           sudo tar xf ps5-payload-dev.tar.gz -C /
+          # Owned by the runner user, so build-sdl.sh can install into the sysroot
+          # without sudo and the cache restores with the same ownership.
+          sudo chown -R "$USER" /opt/ps5-payload-sdk
           test -x /opt/ps5-payload-sdk/bin/prospero-clang
           test -d /opt/ps5-payload-sdk/target/user/homebrew/lib
 
@@ -76,7 +84,7 @@ jobs:
           # no symbols; upstream's own libm.a is a zero-byte placeholder too.
           for l in libm librt; do
             f="$PS5_PAYLOAD_SDK/target/lib/$l.a"
-            [ -f "$f" ] || sudo "$PS5_PAYLOAD_SDK/bin/prospero-ar" rcs "$f"
+            [ -f "$f" ] || "$PS5_PAYLOAD_SDK/bin/prospero-ar" rcs "$f"
           done
 
   # ------------------------------------------------------------------ frontend
@@ -84,8 +92,12 @@ jobs:
     needs: sdk
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v7
+      - name: Make the SDK path writable for the cache
+        # actions/cache extracts without sudo, and /opt is root-owned on the
+        # runner, so the restore cannot create /opt/ps5-payload-sdk on its own.
+        run: sudo install -d -o "$USER" /opt/ps5-payload-sdk
+      - uses: actions/cache@v6
         with:
           path: /opt/ps5-payload-sdk
           key: ${{ needs.sdk.outputs.key }}
@@ -102,7 +114,7 @@ jobs:
         # sysroot with one that feeds touchpad contact into SDL's mouse state.
         run: |
           chmod +x build-sdl.sh
-          sudo -E ./build-sdl.sh
+          ./build-sdl.sh
 
       - name: Build frontend
         run: |
@@ -122,7 +134,7 @@ jobs:
             || { echo "error: touchpad patch missing from retroarch.elf"; exit 1; }
           echo "ok"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: frontend
           path: |
@@ -131,50 +143,35 @@ jobs:
             sce_sys/**
           if-no-files-found: error
 
+  # ---------------------------------------------------------------------- plan
+  # The core list comes from cores/typical/table.txt, cores/patched/ and
+  # cores/websrv/ - the same set `build-core.sh --list` reports - so adding a
+  # core needs no workflow change.
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      cores: ${{ steps.list.outputs.cores }}
+      count: ${{ steps.list.outputs.count }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: list
+        run: python3 cores/_matrix.py | tee -a "$GITHUB_OUTPUT"
+
   # --------------------------------------------------------------------- cores
   cores:
-    needs: sdk
+    needs: [sdk, plan]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        core:
-          - fceumm
-          - nestopia
-          - snes9x
-          - snes9x2010
-          - gambatte
-          - mgba
-          - mednafen_gba
-          - desmume2015
-          - parallel_n64
-          - genesis_plus_gx
-          - picodrive
-          - yabause
-          - mednafen_pce_fast
-          - mednafen_psx
-          - pcsx_rearmed
-          - opera
-          - mednafen_vb
-          - mednafen_wswan
-          - mednafen_ngp
-          - stella2023
-          - prosystem
-          - handy
-          - virtualjaguar
-          - mame2003_plus
-          - mame2010
-          - fbneo
-          - fbalpha2012_cps1
-          - fbalpha2012_cps2
-          - fbalpha2012_neogeo
-          - puae
-          - puae2021
-          - vice
-          - dosbox_pure
+        core: ${{ fromJSON(needs.plan.outputs.cores) }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v7
+      - name: Make the SDK path writable for the cache
+        # actions/cache extracts without sudo, and /opt is root-owned on the
+        # runner, so the restore cannot create /opt/ps5-payload-sdk on its own.
+        run: sudo install -d -o "$USER" /opt/ps5-payload-sdk
+      - uses: actions/cache@v6
         with:
           path: /opt/ps5-payload-sdk
           key: ${{ needs.sdk.outputs.key }}
@@ -188,7 +185,7 @@ jobs:
 
       - name: Build ${{ matrix.core }}
         run: |
-          chmod +x ./build-core.sh cores/*.sh
+          chmod +x ./build-core.sh cores/patched/*.sh cores/websrv/*.sh
           ./build-core.sh ${{ matrix.core }}
 
       - name: Verify the core is loadable on-console
@@ -201,7 +198,9 @@ jobs:
           # libkernel_sys is absent from websrv's process; a module importing it
           # fails to load with no error shown on-screen.
           readelf -dW "$so" | grep -q 'libkernel_web.sprx'
-          ! readelf -dW "$so" | grep -q 'libkernel_sys.sprx'
+          if readelf -dW "$so" | grep -q 'libkernel_sys.sprx'; then
+            echo "error: $so imports libkernel_sys.sprx"; exit 1
+          fi
           for sym in retro_init retro_run retro_load_game retro_get_system_info; do
             "$PS5_PAYLOAD_SDK/bin/prospero-nm" -D --defined-only "$so" | grep -qw "$sym"
           done
@@ -212,7 +211,7 @@ jobs:
           fi
           echo "ok"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: core-${{ matrix.core }}
           path: .config/retroarch/cores/*_libretro.*
@@ -222,7 +221,7 @@ jobs:
   content:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y wget
       - name: Fetch menu assets and databases
         run: |
@@ -230,7 +229,7 @@ jobs:
           ./fetch-assets.sh
           ./fetch-databases.sh
           du -sh .config/retroarch/assets .config/retroarch/database
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: content
           path: .config/retroarch/
@@ -238,26 +237,26 @@ jobs:
 
   # ------------------------------------------------------------------- package
   package:
-    needs: [frontend, cores, content]
+    needs: [plan, frontend, cores, content]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Collect the frontend
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend
           path: dist/RetroArch
 
       - name: Collect the cores
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: core-*
           merge-multiple: true
           path: dist/RetroArch/.config/retroarch/cores
 
       - name: Collect assets and databases
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: content
           path: dist/RetroArch/.config/retroarch
@@ -274,10 +273,12 @@ jobs:
           chmod +x retroarch.elf
           echo "=== payload contents ==="
           ls -l
-          echo "cores: $(ls .config/retroarch/cores/*.so | wc -l)"
+          echo "cores: $(find .config/retroarch/cores -maxdepth 1 -name "*.so" | wc -l)"
           du -sh .
 
       - name: Sanity-check the payload before publishing
+        env:
+          EXPECTED: ${{ needs.plan.outputs.count }}
         run: |
           cd dist/RetroArch
           set -e
@@ -286,8 +287,8 @@ jobs:
           done
           test -d .config/retroarch/assets
           test -d .config/retroarch/database
-          n=$(ls .config/retroarch/cores/*.so | wc -l)
-          [ "$n" -ge 33 ] || { echo "only $n cores, expected 33"; exit 1; }
+          n=$(find .config/retroarch/cores -maxdepth 1 -name "*.so" | wc -l)
+          [ "$n" -ge "$EXPECTED" ] || { echo "only $n cores, expected $EXPECTED"; exit 1; }
           echo "ok: $n cores, payload complete"
 
       - name: Create the zip
@@ -298,7 +299,7 @@ jobs:
           ls -l RetroArch-PS5.zip
           echo "sha256: $(sha256sum RetroArch-PS5.zip | cut -d' ' -f1)"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: RetroArch-PS5
           path: RetroArch-PS5.zip
@@ -312,12 +313,14 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+          CORE_COUNT: ${{ needs.plan.outputs.count }}
         run: |
           set -e
           SHA256=$(sha256sum RetroArch-PS5.zip | cut -d' ' -f1)
 
-          if [ -n "${{ inputs.tag }}" ]; then
-            TAG="${{ inputs.tag }}"
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
             TITLE="RetroArch PS5 $TAG"
             FLAGS=""
           elif [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
@@ -337,7 +340,7 @@ jobs:
           Launcher. ROMs go in \`.config/retroarch/roms\`, BIOS files in
           \`.config/retroarch/system\`.
 
-          Includes the frontend, 33 cores, menu assets and databases.
+          Includes the frontend, $CORE_COUNT cores, menu assets and databases.
 
           \`\`\`
           RetroArch-PS5.zip

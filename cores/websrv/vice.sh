@@ -16,12 +16,12 @@
 # <http://www.gnu.org/licenses/>.
 
 VER="master"
-URL="https://github.com/libretro/libretro-fceumm/archive/refs/heads/master.tar.gz"
-INFO="https://raw.githubusercontent.com/libretro/libretro-core-info/refs/heads/master/fceumm_libretro.info"
+URL="https://github.com/libretro/vice-libretro/archive/refs/heads/master.tar.gz"
+INFO="https://raw.githubusercontent.com/libretro/libretro-core-info/refs/heads/master/vice_x64_libretro.info"
 
 SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
-# This script lives in cores/; the payload it stages into is one level up.
-ROOT_DIR="$(dirname "$(dirname "${SCRIPT_PATH}")")"
+# This script lives in cores/<category>/; the payload it stages into is two levels up.
+ROOT_DIR="$(dirname "$(dirname "$(dirname "${SCRIPT_PATH}")")")"
 
 if [[ -z "$PS5_PAYLOAD_SDK" ]]; then
     echo "error: PS5_PAYLOAD_SDK is not set"
@@ -33,12 +33,12 @@ source "${PS5_PAYLOAD_SDK}/toolchain/prospero.sh" || exit 1
 TEMPDIR=$(mktemp -d)
 trap 'rm -rf -- "$TEMPDIR"' EXIT
 
-wget -O $TEMPDIR/libretro-fceumm.tar.gz "${URL}" || exit 1
-tar xf  $TEMPDIR/libretro-fceumm.tar.gz -C $TEMPDIR || exit 1
+wget -O $TEMPDIR/vice-libretro.tar.gz "${URL}" || exit 1
+tar xf  $TEMPDIR/vice-libretro.tar.gz -C $TEMPDIR || exit 1
 
-cd $TEMPDIR/libretro-fceumm-$VER || exit 1
+cd $TEMPDIR/vice-libretro-$VER || exit 1
 ${MAKE} || exit 1
 
 mkdir -p "${ROOT_DIR}/.config/retroarch/cores" || exit 1
-mv $TEMPDIR/libretro-fceumm-$VER/fceumm_libretro.so "${ROOT_DIR}/.config/retroarch/cores/" || exit 1
-wget $INFO -O "${ROOT_DIR}/.config/retroarch/cores/fceumm_libretro.info"
+mv $TEMPDIR/vice-libretro-$VER/vice_x64_libretro.so "${ROOT_DIR}/.config/retroarch/cores/" || exit 1
+wget $INFO -O "${ROOT_DIR}/.config/retroarch/cores/vice_x64_libretro.info"

@@ -6,13 +6,15 @@
 # has no external dependencies beyond pthread, and upstream already supports an
 # interpreter-only build for platforms that forbid executable memory.
 
-VER="master"
-URL="https://github.com/schellingb/dosbox-pure/archive/refs/heads/master.tar.gz"
+# Upstream moved from GitHub to Codeberg on 2026-10-03; the GitHub repo now holds
+# only a notice. Pinned to the latest release rather than the main branch.
+VER="1.0-preview6"
+URL="https://codeberg.org/schelling/dosbox-pure/archive/${VER}.tar.gz"
 INFO="https://raw.githubusercontent.com/libretro/libretro-core-info/refs/heads/master/dosbox_pure_libretro.info"
 
 SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
-# This script lives in cores/; the payload it stages into is one level up.
-ROOT_DIR="$(dirname "$(dirname "${SCRIPT_PATH}")")"
+# This script lives in cores/<category>/; the payload it stages into is two levels up.
+ROOT_DIR="$(dirname "$(dirname "$(dirname "${SCRIPT_PATH}")")")"
 
 if [[ -z "$PS5_PAYLOAD_SDK" ]]; then
     echo "error: PS5_PAYLOAD_SDK is not set"
@@ -27,9 +29,9 @@ trap 'rm -rf -- "$TEMPDIR"' EXIT
 wget -O $TEMPDIR/dosbox-pure.tar.gz "${URL}" || exit 1
 tar xf  $TEMPDIR/dosbox-pure.tar.gz -C $TEMPDIR || exit 1
 
-# Detect the extracted directory rather than assuming it matches $VER: GitHub
-# names it after the default branch, which here is "main", not "master".
-SRC=$(find "$TEMPDIR" -maxdepth 1 -type d -name 'dosbox-pure-*' | head -n1)
+# Detect the extracted directory rather than assuming its name: Codeberg archives
+# extract to plain "dosbox-pure", GitHub ones to "dosbox-pure-<ref>".
+SRC=$(find "$TEMPDIR" -mindepth 1 -maxdepth 1 -type d -name 'dosbox-pure*' | head -n1)
 [ -n "$SRC" ] || { echo "error: could not find the extracted source"; exit 1; }
 cd "$SRC" || exit 1
 

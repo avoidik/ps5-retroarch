@@ -24,3 +24,5 @@ dist/
 *.bak
 *.orig
 *.before-*
+
+__pycache__/

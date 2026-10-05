@@ -4,12 +4,12 @@
 # toolchain, prove the result can actually load on the console, then stage it
 # next to its .info file.
 #
-# Most cores never touch this file - they are a row in _table.txt, which
+# Most cores never touch this file - they are a row in typical/table.txt, which
 # ../build-core.sh turns into the variables below. A core needing a source patch,
-# a build assertion or an .info fixup gets its own cores/<name>.sh, which sources
-# this file, sets what it needs and calls build_libretro_core:
+# a build assertion or an .info fixup gets its own patched/<name>.sh, which
+# sources this file, sets what it needs and calls build_libretro_core:
 #
-#     source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/_common.sh" || exit 1
+#     source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../_common.sh" || exit 1
 #
 #     CORE=picodrive
 #     REPO=libretro/picodrive

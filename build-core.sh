@@ -7,26 +7,51 @@
 #   ./build-core.sh --all         every core, with a summary
 #   ./build-core.sh --list        what is available, and how each is defined
 #
-# A core is defined either by a row in cores/_table.txt (the common case: just a
-# repository and a makefile path) or by its own cores/<name>.sh, for the ones
-# that need a source patch, a build assertion or an .info fixup. A dedicated
-# script wins over a table row of the same name.
+# Cores are grouped by how they are built:
+#
+#   cores/typical/table.txt   upstream source built as is - one row per core
+#   cores/patched/<name>.sh   needs a source patch, a build assertion or an
+#                             .info fixup
+#   cores/websrv/<name>.sh    kept close to the scripts in ps5-payload-dev/websrv
+#
+# A core name must appear in exactly one place.
 
 ROOT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 CORES_DIR="$ROOT_DIR/cores"
-TABLE="$CORES_DIR/_table.txt"
+TABLE="$CORES_DIR/typical/table.txt"
+SCRIPT_DIRS=(patched websrv)
 
 rows() { grep -vE '^[[:space:]]*(#|$)' "$TABLE"; }
 
 table_names() { rows | cut -d'|' -f1; }
 
 script_names() {
-    # _common.sh and _table.txt are plumbing, not cores.
-    find "$CORES_DIR" -maxdepth 1 -type f -name '*.sh' ! -name '_*' \
-        -exec basename {} .sh \; | sort
+    local d
+    for d in "${SCRIPT_DIRS[@]}"; do
+        find "$CORES_DIR/$d" -maxdepth 1 -type f -name '*.sh' -exec basename {} .sh \;
+    done
 }
 
 all_names() { { script_names; table_names; } | sort -u; }
+
+# The script defining a core, if it has one.
+script_for() {
+    local d
+    for d in "${SCRIPT_DIRS[@]}"; do
+        if [[ -f "$CORES_DIR/$d/$1.sh" ]]; then
+            echo "$CORES_DIR/$d/$1.sh"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Defined twice would silently build whichever is found first.
+dupes=$({ script_names; table_names; } | sort | uniq -d)
+if [[ -n "$dupes" ]]; then
+    echo "error: core defined more than once: $(tr '\n' ' ' <<<"$dupes")"
+    exit 1
+fi
 
 usage() {
     echo "usage: $(basename "$0") <core> | --all | --list"
@@ -36,10 +61,11 @@ usage() {
 build_one() {
     local name="$1"
 
-    if [[ -f "$CORES_DIR/$name.sh" ]]; then
+    local script
+    if script=$(script_for "$name"); then
         # Its own script: run it as a child so nothing it defines leaks into a
         # subsequent core in the same --all run.
-        bash "$CORES_DIR/$name.sh"
+        bash "$script"
         return $?
     fi
 
@@ -78,10 +104,10 @@ case "${1:-}" in
     --list)
         printf '%-22s %s\n' CORE DEFINED_BY
         while read -r n; do
-            if [[ -f "$CORES_DIR/$n.sh" ]]; then
-                printf '%-22s cores/%s.sh\n' "$n" "$n"
+            if script=$(script_for "$n"); then
+                printf '%-22s %s\n' "$n" "${script#"$ROOT_DIR"/}"
             else
-                printf '%-22s cores/_table.txt\n' "$n"
+                printf '%-22s cores/typical/table.txt\n' "$n"
             fi
         done < <(all_names)
         echo

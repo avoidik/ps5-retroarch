@@ -1,0 +1,169 @@
+SDL (ps5-payload-dev/SDL, release-2.30.x-ps5): forward DualSense touchpad
+coordinates to SDL's mouse state.
+
+RetroArch derives RETRO_DEVICE_POINTER from SDL_GetMouseState(), and its SDL
+input driver reads neither SDL touch events nor SDL_CONTROLLERTOUCHPAD events.
+So the touchpad has to arrive as absolute mouse motion to be usable as a pointer.
+
+Applied by build-sdl.sh with `patch -p1 --fuzz=0` from the SDL source root.
+Regenerate after an upstream change with `diff -u` against a clean tree.
+
+--- a/src/joystick/ps5/SDL_ps5joystick.c
++++ b/src/joystick/ps5/SDL_ps5joystick.c
+@@ -30,6 +30,9 @@
+ #include "../SDL_sysjoystick.h"
+ 
+ #include "SDL_ps5joystick.h"
++#include "SDL_mouse.h"
++#include "SDL_video.h"
++#include "../../events/SDL_mouse_c.h"
+ 
+ #define PS5_MAX_USERS 4
+ 
+@@ -210,6 +213,137 @@
+ 
+ 
+ 
++/* Report the touchpad as absolute mouse motion.
++
++   RetroArch's SDL input driver builds RETRO_DEVICE_POINTER out of
++   SDL_GetMouseState(); it does not look at SDL touch events or at
++   SDL_CONTROLLERTOUCHPAD events, so mouse motion is the only route that
++   reaches a libretro core as a pointer.
++
++   The touchpad coordinate range is not reported by the pad. It is assumed to
++   be 1920x1070, the range SDL's own HIDAPI DualSense driver uses, and can be
++   corrected at runtime with PS5_TOUCHPAD_MAX_X and PS5_TOUCHPAD_MAX_Y if the
++   pointer does not span the whole screen.
++
++   One finger is followed at a time, by its touch id: the first finger down
++   drives the pointer until it lifts, even if a second finger is also on the
++   pad. A finger left behind is not adopted - the pad must be released first -
++   so the pointer never jumps across the screen mid-gesture.
++
++   The first motion of each touch is sent as SDL_TOUCH_MOUSEID, which SDL
++   positions the pointer with but reports no relative motion for. Without
++   that, every new touch would arrive at RETRO_DEVICE_MOUSE cores (DOSBox,
++   PUAE, VICE) as one large jump. Later motion uses the ordinary mouse id, so
++   moving a finger produces normal relative motion.
++
++   By default a finger on the pad presses the left button, which mimics a
++   touchscreen. Set PS5_TOUCHPAD_CLICK_PRESS=1 to take the press from the
++   physical touchpad click instead, which allows aiming before committing. */
++static void PS5_TouchpadToMouse(const PS5_PadData *prev, const PS5_PadData *cur)
++{
++    static int max_x = 0;
++    static int max_y = 0;
++    static int click_press = -1;
++    static SDL_bool tracking = SDL_FALSE;
++    static SDL_bool wait_for_release = SDL_FALSE;
++    static Uint8 track_id = 0;
++    const PS5_PadTouch *touch = NULL;
++    SDL_bool touch_down = SDL_FALSE;
++    SDL_Window *window;
++    int fingers;
++    int w = 0;
++    int h = 0;
++    int i;
++    SDL_bool was_down;
++    SDL_bool is_down;
++
++    if (max_x == 0) {
++        const char *env;
++        max_x = (env = SDL_getenv("PS5_TOUCHPAD_MAX_X")) ? SDL_atoi(env) : 1920;
++        max_y = (env = SDL_getenv("PS5_TOUCHPAD_MAX_Y")) ? SDL_atoi(env) : 1070;
++        if (max_x <= 0) {
++            max_x = 1920;
++        }
++        if (max_y <= 0) {
++            max_y = 1070;
++        }
++        env = SDL_getenv("PS5_TOUCHPAD_CLICK_PRESS");
++        click_press = (env && SDL_atoi(env)) ? 1 : 0;
++    }
++
++    /* Pick the finger to follow. */
++    fingers = SDL_min((int)cur->touch.fingers, (int)SDL_arraysize(cur->touch.touch));
++    if (tracking) {
++        for (i = 0; i < fingers; i++) {
++            if (cur->touch.touch[i].finger == track_id) {
++                touch = &cur->touch.touch[i];
++                break;
++            }
++        }
++        if (!touch) {
++            /* The tracked finger lifted. Ignore any finger still down. */
++            tracking = SDL_FALSE;
++            wait_for_release = (fingers > 0) ? SDL_TRUE : SDL_FALSE;
++        }
++    } else if (wait_for_release) {
++        if (fingers == 0) {
++            wait_for_release = SDL_FALSE;
++        }
++    } else if (fingers > 0) {
++        tracking = SDL_TRUE;
++        track_id = cur->touch.touch[0].finger;
++        touch = &cur->touch.touch[0];
++        touch_down = SDL_TRUE;
++    }
++
++    window = SDL_GetMouseFocus();
++    if (!window) {
++        window = SDL_GetKeyboardFocus();
++    }
++    if (!window) {
++        return;
++    }
++    SDL_GetWindowSize(window, &w, &h);
++    if (w <= 0 || h <= 0) {
++        return;
++    }
++
++    if (touch) {
++        int x = (int)(((Sint64)touch->x * w) / max_x);
++        int y = (int)(((Sint64)touch->y * h) / max_y);
++        if (x < 0) {
++            x = 0;
++        } else if (x > w - 1) {
++            x = w - 1;
++        }
++        if (y < 0) {
++            y = 0;
++        } else if (y > h - 1) {
++            y = h - 1;
++        }
++        /* SDL drops motion that does not change the position by itself. */
++        SDL_SendMouseMotion(window, touch_down ? SDL_TOUCH_MOUSEID : 0, 0, x, y);
++    }
++
++    if (click_press) {
++        was_down = (prev->buttons & PS5_PAD_BUTTON_TOUCH_PAD) ? SDL_TRUE : SDL_FALSE;
++        is_down = (cur->buttons & PS5_PAD_BUTTON_TOUCH_PAD) ? SDL_TRUE : SDL_FALSE;
++    } else {
++        /* Follows the tracked finger, not the raw count, so lifting the first
++           of two fingers releases the button where that finger left off. */
++        static SDL_bool finger_down = SDL_FALSE;
++        was_down = finger_down;
++        is_down = touch ? SDL_TRUE : SDL_FALSE;
++        finger_down = is_down;
++    }
++
++    /* Motion above is emitted before this, so the press lands on the right spot. */
++    if (is_down != was_down) {
++        SDL_SendMouseButton(window, 0, is_down ? SDL_PRESSED : SDL_RELEASED,
++                            SDL_BUTTON_LEFT);
++    }
++}
++
+ static void PS5_JoystickUpdate(SDL_Joystick *joystick)
+ {
+     PS5_PadContext *ctx = PS5_JoystickGetPadContext(joystick);
+@@ -287,6 +421,8 @@
+         SDL_PrivateJoystickHat(joystick, 0, hat);
+     }
+ 
++    PS5_TouchpadToMouse(&ctx->pad, &pad);
++
+     SDL_memcpy(&ctx->pad, &pad, sizeof(pad));
+ }
+ 

@@ -1,5 +1,5 @@
-﻿#!/usr/bin/env bash
-#   Copyright (C) 2024 John TÃ¶rnblom
+#!/usr/bin/env bash
+#   Copyright (C) 2024 John Törnblom
 #
 # This file is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
 # Modified 2026-08-01: only seed retroarch.cfg when none exists, so a rebuild no
 # longer discards accumulated settings. Original from ps5-payload-dev/websrv.
 
-VER="1.21.0"
-URL="https://github.com/libretro/RetroArch/archive/refs/tags/v$VER.tar.gz"
+VER="1.22.2"
+URL="https://github.com/libretro/RetroArch/archive/refs/tags/v${VER}.tar.gz"
 
 SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"
@@ -40,6 +40,9 @@ tar xf  $TEMPDIR/RetroArch.tar.gz -C $TEMPDIR || exit 1
 cd $TEMPDIR/RetroArch-$VER || exit 1
 sed -i 's|SDL_RENDERER_ACCELERATED|SDL_RENDERER_SOFTWARE|g' gfx/drivers/sdl2_gfx.c
 sed -i 's|$(LIBRETRO_COMM_DIR)/utils/md5.o||g' Makefile.common
+# 1.22.2 regression: libchdr_flac.c always uses the dr_flac API but only includes
+# dr_flac.h under HAVE_DR_FLAC, which is defined for builtin FLAC only.
+sed -i 's|^#ifdef HAVE_DR_FLAC$|#if 1|' libretro-common/formats/libchdr/libchdr_flac.c
 
 export CC
 export CXX
@@ -83,8 +86,9 @@ export LDFLAGS="-rdynamic"
     --disable-opengl_core \
     --disable-opengl1 \
     --disable-opengl \
-    --disable-microphone
-    ${MAKE} V=1 || exit 1
+    --disable-microphone || exit 1
+
+${MAKE} V=1 || exit 1
 
 
 mkdir -p "${SCRIPT_DIR}/sce_sys"

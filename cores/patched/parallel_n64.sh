@@ -2,7 +2,7 @@
 #
 # Nintendo 64 (ParaLLEl N64), built as a pure software core.
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/_common.sh" || exit 1
+source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../_common.sh" || exit 1
 
 CORE=parallel_n64
 REPO=libretro/parallel-n64

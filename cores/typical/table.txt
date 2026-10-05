@@ -1,7 +1,8 @@
-# Cores whose whole recipe is a declaration: fetch from GitHub, build with the
-# shared flags in _common.sh, verify, stage. A core needing anything more than
-# this - a source patch, a build assertion, an .info fixup - gets its own
-# cores/<name>.sh instead.
+# Typical cores: upstream source built as is with the shared flags in
+# ../_common.sh, then verified and staged. Their whole recipe is a declaration.
+# A core needing anything more - a source patch, a build assertion, an .info
+# fixup - gets a script in ../patched/ instead. Cores kept close to the scripts
+# in ps5-payload-dev/websrv live in ../websrv/.
 #
 # Pipe-separated. Blank lines and #-comments are ignored. Trailing fields may be
 # left empty.
@@ -14,7 +15,7 @@
 #   makefile    empty means Makefile
 #
 # Add a core by adding a row. Nothing else needs to change - build-core.sh and
-# the release workflow both read this file.
+# the release workflow (via ../_matrix.py) both read this file.
 
 # --- Nintendo ---------------------------------------------------------------
 # Nestopia is more accurate than fceumm and heavier; both are kept so a game
@@ -26,11 +27,16 @@ snes9x|libretro/snes9x|libretro|||
 # libc.a already has in no-locale.o. With it, mgba calls a function the C headers
 # never declare - hence the shim, which supplies the real prototype.
 mgba|libretro/mgba||Makefile.libretro||-DHAVE_STRTOF_L -include ${ROOT_DIR}/shims/ps5-locale.h
+# HAVE_NETWORK=0 keeps the network link-cable emulation out, as the old script did.
+gambatte|libretro/gambatte-libretro|||HAVE_NETWORK=0|
 
 # --- Sega -------------------------------------------------------------------
 # Yabause is software-rendered, so expect it to be slow; it is here because
 # nothing else covers the Saturn without a GL context.
 yabause|libretro/yabause|yabause/src/libretro|||
+
+# --- Sony -------------------------------------------------------------------
+mednafen_psx|libretro/beetle-psx-libretro||||
 
 # --- NEC / Bandai / SNK / Nintendo handhelds --------------------------------
 mednafen_pce_fast|libretro/beetle-pce-fast-libretro||||
@@ -48,6 +54,10 @@ virtualjaguar|libretro/virtualjaguar-libretro||||
 # --- 3DO --------------------------------------------------------------------
 # Needs a 3DO BIOS in .config/retroarch/system.
 opera|libretro/opera-libretro||||
+
+# --- Commodore --------------------------------------------------------------
+# Current PUAE. puae2021 (../websrv/) is the frozen 2.6.1 branch.
+puae|libretro/libretro-uae||||
 
 # --- Arcade -----------------------------------------------------------------
 # Focused splits of FB Alpha: far smaller than fbneo and enough for these

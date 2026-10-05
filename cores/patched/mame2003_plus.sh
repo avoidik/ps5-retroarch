@@ -20,8 +20,8 @@ URL="https://github.com/libretro/mame2003-plus-libretro/archive/refs/heads/maste
 INFO="https://raw.githubusercontent.com/libretro/libretro-core-info/refs/heads/master/mame2003_plus_libretro.info"
 
 SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
-# This script lives in cores/; the payload it stages into is one level up.
-ROOT_DIR="$(dirname "$(dirname "${SCRIPT_PATH}")")"
+# This script lives in cores/<category>/; the payload it stages into is two levels up.
+ROOT_DIR="$(dirname "$(dirname "$(dirname "${SCRIPT_PATH}")")")"
 
 if [[ -z "$PS5_PAYLOAD_SDK" ]]; then
     echo "error: PS5_PAYLOAD_SDK is not set"

@@ -15,8 +15,8 @@
 # along with this program; see the file COPYING. If not see
 # <http://www.gnu.org/licenses/>.
 
-VER="1.20.0"
-URL="https://github.com/libretro/retroarch-assets/archive/refs/tags/v1.20.0.tar.gz"
+VER="1.22.0"
+URL="https://github.com/libretro/retroarch-assets/archive/refs/tags/v${VER}.tar.gz"
 
 SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"

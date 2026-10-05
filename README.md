@@ -89,29 +89,33 @@ are lost.
 | `build-core.sh <core>` | one core; `--all` for every core, `--list` for what is available |
 | `fetch-assets.sh`, `fetch-databases.sh` | menu assets and game databases |
 
-The core recipes live in `cores/`:
+The core recipes live in `cores/`, grouped by how each core is built:
 
 | Path | Holds |
 |---|---|
-| `cores/_table.txt` | the 16 cores that are just a repository and a makefile path - one row each |
-| `cores/<name>.sh` | the 17 that need more: a source patch, a build assertion, an `.info` fixup |
+| `cores/typical/table.txt` | 19 cores built from upstream source as is - one row each: a repository, a makefile path, make arguments |
+| `cores/patched/<name>.sh` | 7 cores that need more: a source patch, a build assertion, an `.info` fixup |
+| `cores/websrv/<name>.sh` | 7 cores whose scripts come from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch), kept close to the originals so upstream changes are easy to compare |
 | `cores/_common.sh` | shared fetch, cross-compile, verify and stage logic |
+| `cores/_matrix.py` | the core list as a build matrix for the release workflow |
 
-Adding a straightforward core means adding one row to `cores/_table.txt` -
-`build-core.sh` and the release workflow both read it, so nothing else changes.
+A core name may appear in only one of these places. Adding a straightforward
+core means adding one row to `cores/typical/table.txt` - `build-core.sh` and the
+release workflow both read it, so nothing else changes.
 
-Each core lands in `.config/retroarch/cores` next to its `.info` file. Nothing is
-staged unless it exports the libretro entry points in its **dynamic** symbol
-table, imports `libkernel_web.sprx` (proof the Prospero toolchain was used and
-not the host compiler), does not import `libkernel_sys.sprx` (absent from
-websrv's process, and a module that wants it fails to load with nothing shown on
-screen), and does not declare `hw_render`.
+Each core lands in `.config/retroarch/cores` next to its `.info` file. Before a
+core is staged - by `_common.sh` for the table and for the patched scripts that
+use it, and by the release workflow for every core - it must export the libretro
+entry points in its **dynamic** symbol table, import `libkernel_web.sprx` (proof
+the Prospero toolchain was used and not the host compiler), not import
+`libkernel_sys.sprx` (absent from websrv's process, and a module that wants it
+fails to load with nothing shown on screen), and not declare `hw_render`.
 
 You need the [ps5-payload-dev/sdk](https://github.com/ps5-payload-dev/sdk)
 toolchain plus the prebuilt sysroot, on Ubuntu 24.04 (the SDK pins clang/lld 18):
 
 ```sh
-sudo apt-get install -y clang-18 lld-18 llvm-18 llvm-18-dev build-essential wget unzip
+sudo apt-get install -y clang-18 lld-18 llvm-18 llvm-18-dev build-essential cmake pkg-config wget unzip
 
 wget https://github.com/ps5-payload-dev/sdk/releases/latest/download/ps5-payload-sdk.zip
 sudo unzip -d /opt ps5-payload-sdk.zip
@@ -119,6 +123,9 @@ sudo unzip -d /opt ps5-payload-sdk.zip
 # prebuilt third-party libs (SDL2, ffmpeg, freetype, zlib, ...); extracts over /
 wget https://github.com/ps5-payload-dev/pacbrew-repo/releases/latest/download/ps5-payload-dev.tar.gz
 sudo tar xf ps5-payload-dev.tar.gz -C /
+
+# build-sdl.sh installs the patched SDL2 into the SDK sysroot, so it must be writable
+sudo chown -R "$USER" /opt/ps5-payload-sdk
 
 export PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk
 ./build-sdl.sh          # patched SDL, before the frontend
@@ -149,8 +156,8 @@ The cores are **not** all under the same licence:
 No binaries are committed to this repository, but **the release zip does contain
 them**, so those terms apply to the releases: the non-commercial cores may not be
 redistributed commercially, and MAME's licence has its own conditions. The GPLv2
-cores are built from the upstream sources named in `cores/_table.txt` and
-`cores/<name>.sh`, which serve as the corresponding source.
+cores are built from the upstream sources named in `cores/typical/table.txt`,
+`cores/patched/` and `cores/websrv/`, which serve as the corresponding source.
 
 Bundled fonts and menu assets carry their own licences, included alongside them
 under `.config/retroarch/assets`.

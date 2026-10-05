@@ -6,7 +6,7 @@
 # Run this BEFORE build.sh. The prebuilt SDL2 in the pacbrew sysroot is stock, and
 # a frontend linked against it has no touchpad pointer - RetroArch derives
 # RETRO_DEVICE_POINTER from SDL_GetMouseState(), and stock SDL never feeds
-# touchpad contact into the mouse state. See patches/sdl-ps5-touchpad.py.
+# touchpad contact into the mouse state. See patches/sdl-ps5-touchpad.patch.
 
 URL="https://github.com/ps5-payload-dev/SDL/archive/refs/heads/master.tar.gz"
 
@@ -35,11 +35,10 @@ fi
 cd "$SRC" || exit 1
 
 echo "=== applying the touchpad patch ==="
-python3 "${SCRIPT_DIR}/patches/sdl-ps5-touchpad.py" src/joystick/ps5/SDL_ps5joystick.c || exit 1
-
-# Assert the patch actually landed. It is applied by a script rather than `patch`,
-# so a silent no-op would otherwise produce a stock SDL that looks fine.
-grep -q 'PS5_TouchpadToMouse' src/joystick/ps5/SDL_ps5joystick.c || {
+# --fuzz=0: if upstream has changed around any hunk, fail rather than guess where
+# the code goes. Regenerate the patch against the new source instead.
+patch -p1 --fuzz=0 --forward --no-backup-if-mismatch \
+    < "${SCRIPT_DIR}/patches/sdl-ps5-touchpad.patch" || {
     echo "error: patch did not apply"
     exit 1
 }
