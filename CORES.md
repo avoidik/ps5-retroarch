@@ -11,7 +11,8 @@ described at the end to refresh them.
 | Item | Value |
 |---|---|
 | Cores shipped | **115**: 87 typical (`cores/typical/table.txt`), 21 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
-| Added on 2026-10-05 | 81 software-rendered emulators, not yet built in CI at the time of writing (see [Emulators added on 2026-10-05](#emulators-added-on-2026-10-05)) |
+| Added on 2026-10-05 | 81 software-rendered emulators (see [Emulators added on 2026-10-05](#emulators-added-on-2026-10-05)); all build and pass the loadability checks, none tested on a console yet |
+| Latest release | [v1.0.1](https://github.com/avoidik/ps5-retroarch/releases/tag/v1.0.1) (2026-10-05, commit `37223e4`): `RetroArch-PS5-engine.zip` (240 MB) and `RetroArch-PS5-cores.zip` (165 MB, all 115 cores) |
 | Official Linux x86_64 cores | 244, of which all 115 shipped here are part |
 | Missing from the official set | 129 - see [Coverage](#coverage-against-the-official-distribution) |
 | Pinned | 3: `dosbox_pure` and `stella` to a release, `quasi88` to a commit (upstream's latest does not compile here) |
@@ -128,8 +129,12 @@ Generated from libretro-super's `recipes/linux/cores-linux-x64-generic`: every
 software-rendered, non-experimental emulator in the official x86_64 build with a
 make or CMake recipe there, except the full MAME/HBMAME builds and `rustynes`
 (Rust; no Rust toolchain targets the PS5). `stella` is pinned to the 7.0
-release: its `master` needs a newer C++ compiler than the SDK's clang 18. None had been built for this target
-when they were added, so the first CI runs decide which need more work.
+release: its `master` needs a newer C++ compiler than the SDK's clang 18.
+
+All 81 build and pass the loadability checks as of v1.0.1. Getting there took
+several CI rounds; the fixes are described under
+[What the recipes have to work around](#what-the-recipes-have-to-work-around).
+None of them has been run on a console yet.
 
 | Core | System | Source | Branch | Recipe | Licence |
 |---|---|---|---|---|---|
@@ -377,13 +382,17 @@ reminiscence, scummvm, superbroswar, tic80, tyrquake, uw8, vemulator, vitaquake2
 
 ## Recommendations
 
-1. **Get the 81 added cores through CI.** The release is blocked until every
-   core builds, by choice, so expect several rounds: the usual blockers are a
-   JIT that must be switched off, glibc-only calls or feature macros, missing
-   libraries in the sysroot (`applewin` needs yaml and minizip), output in an
-   unexpected place, and cores that quietly want GL.
-2. **Test the added cores on the console.** CI proves a core loads; it cannot
-   prove a recompiler is off or that the core is fast enough without one.
+1. **Test the added cores on the console.** CI proves a core builds for the
+   PS5 and exports and imports what a loadable core should; it cannot prove a
+   recompiler is off or that a core is fast enough without one. Look first at
+   the cores whose JIT was switched off by a build flag (`dosbox_svn`,
+   `dosbox_core`, `gpsp`, `blastem`) and the heaviest ones (`mednafen_saturn`,
+   `bsnes`, `bsnes_hd_beta`, `dosbox_core`, the MAME derivatives).
+2. **Expect upstream drift.** 112 cores build from a branch head, so a later
+   upstream commit can break a build that works today, as happened to
+   `quasi88` and `stella`. The release blocks on any failed core, so such a
+   break shows up as a failed run; pin the core to its last good commit (the
+   table's branch column takes a hash) until upstream is fixed.
 3. **Then the emulators without a recipe** that add a system (`minivmac`,
    `virtualxt`, `gearcoleco`, `ep128emu_core`, ...).
 4. **Game ports, if wanted:** `scummvm` first (hundreds of adventure games), then
