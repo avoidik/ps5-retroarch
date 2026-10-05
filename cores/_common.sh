@@ -132,6 +132,14 @@ build_libretro_core() {
     #
     # HAVE_CDROM=0: libretro-common/cdrom has no PS5 ioctl path.
     #
+    # -include ps5-pthread-np.h: libretro-common's rthreads.c calls
+    # pthread_set_name_np() on __FreeBSD__ without including <pthread_np.h>.
+    # The shim supplies just that prototype; see shims/ps5-pthread-np.h.
+    # The path is joined to -include on purpose: prospero-clang treats any
+    # argument not starting with "-" as a source file and then links, so a
+    # separate path turns the `$(CC) -v` sniff below into two "clang" lines -
+    # the same -fipa-pta failure in parallel_n64.
+    #
     # -Wno-unused-command-line-argument keeps the define from breaking compiler
     # detection. Some makefiles sniff with `$(CC) -v 2>&1 | grep -c clang` and
     # expect exactly one line: clang reports the unused define on the flags-only
@@ -139,6 +147,7 @@ build_libretro_core() {
     # GCC branch then adds flags clang rejects (parallel_n64 picks up -fipa-pta
     # and every compile fails).
     local defines="-DCLOCK_REALTIME=0 -DCLOCK_MONOTONIC=4"
+    defines+=" -include${ROOT_DIR}/shims/ps5-pthread-np.h"
     defines+=" -Wno-unused-command-line-argument ${EXTRA_DEFINES:-}"
     (
         cd "$src/$make_dir" || exit 1

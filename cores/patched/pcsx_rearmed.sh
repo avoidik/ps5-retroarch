@@ -40,8 +40,11 @@ cd $TEMPDIR/pcsx_rearmed-$VER || exit 1
 
 # rthreads.c pulls <sys/time.h> for CLOCK_REALTIME only when BSD/ORBIS/VITA is
 # defined; without it clock_gettime() has no clock id on this target.
-sed -i 's|^USE_ASYNC_CDROM ?= 1|&\nCFLAGS += -DBSD|' Makefile.libretro
-grep -q 'CFLAGS += -DBSD' Makefile.libretro || { echo "error: failed to inject -DBSD"; exit 1; }
+#
+# It also calls pthread_set_name_np() on __FreeBSD__ without its prototype;
+# shims/ps5-pthread-np.h supplies it.
+sed -i "s|^USE_ASYNC_CDROM ?= 1|&\nCFLAGS += -DBSD -include${ROOT_DIR}/shims/ps5-pthread-np.h|" Makefile.libretro
+grep -q 'CFLAGS += -DBSD -include.*ps5-pthread-np.h' Makefile.libretro || { echo "error: failed to inject -DBSD and the pthread_np shim"; exit 1; }
 
 # the startup CPU feature check emits __cpu_model/__cpu_indicator_init, which are
 # libgcc/compiler-rt symbols the SDK does not ship. They are data, so they must

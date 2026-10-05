@@ -23,10 +23,6 @@
 nestopia|libretro/nestopia|libretro|||
 # Current Snes9x. snes9x2010 is the older, lighter fork of the same emulator.
 snes9x|libretro/snes9x|libretro|||
-# Without HAVE_STRTOF_L, mgba defines its own strtof_l and collides with the one
-# libc.a already has in no-locale.o. With it, mgba calls a function the C headers
-# never declare - hence the shim, which supplies the real prototype.
-mgba|libretro/mgba||Makefile.libretro||-DHAVE_STRTOF_L -include ${ROOT_DIR}/shims/ps5-locale.h
 # HAVE_NETWORK=0 keeps the network link-cable emulation out, as the old script did.
 gambatte|libretro/gambatte-libretro|||HAVE_NETWORK=0|
 
@@ -66,3 +62,8 @@ puae|libretro/libretro-uae||||
 fbalpha2012_cps1|libretro/fbalpha2012_cps1||makefile.libretro||
 fbalpha2012_cps2|libretro/fbalpha2012_cps2||makefile.libretro||
 fbalpha2012_neogeo|libretro/fbalpha2012_neogeo||makefile.libretro||
+
+# --- Game engines -----------------------------------------------------------
+# Doom, Doom II, Final Doom, Freedoom and PWAD add-ons. Bring your own WADs;
+# the engine's own prboom.wad is compiled into the core.
+prboom|libretro/libretro-prboom||||

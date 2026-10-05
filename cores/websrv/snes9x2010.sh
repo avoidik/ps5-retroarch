@@ -37,7 +37,10 @@ wget -O $TEMPDIR/snes9x2010.tar.gz "${URL}" || exit 1
 tar xf  $TEMPDIR/snes9x2010.tar.gz -C $TEMPDIR || exit 1
 
 cd $TEMPDIR/snes9x2010-$VER || exit 1
-${MAKE} || exit 1
+# Local change, not in websrv: libretro-common's rthreads.c now needs
+# CLOCK_REALTIME (hidden by its own _POSIX_C_SOURCE 199309) and the
+# pthread_set_name_np prototype. Same flags _common.sh gives every core.
+${MAKE} CC="$CC -DCLOCK_REALTIME=0 -DCLOCK_MONOTONIC=4 -include${ROOT_DIR}/shims/ps5-pthread-np.h -Wno-unused-command-line-argument" || exit 1
 
 mkdir -p "${ROOT_DIR}/.config/retroarch/cores" || exit 1
 mv $TEMPDIR/snes9x2010-$VER/snes9x2010_libretro.so "${ROOT_DIR}/.config/retroarch/cores/" || exit 1

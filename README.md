@@ -1,6 +1,6 @@
 ﻿# RetroArch for jailbroken PS5
 
-Build recipes for a RetroArch payload for a jailbroken PS5, with 33 libretro
+Build recipes for a RetroArch payload for a jailbroken PS5, with 34 libretro
 cores.
 
 The PS5 port of RetroArch itself is **john-tornblom's**, distributed as part of
@@ -43,6 +43,7 @@ repository is that port plus extra cores; all of the porting work is his.
 | `puae` / `puae2021` | Amiga |
 | `vice_x64` | Commodore 64 |
 | `dosbox_pure` | MS-DOS / PC |
+| `prboom` | Doom / Doom II / Final Doom / Freedoom (bring your own WADs) |
 
 ## Install
 
@@ -94,8 +95,8 @@ The core recipes live in `cores/`, grouped by how each core is built:
 | Path | Holds |
 |---|---|
 | `cores/typical/table.txt` | 19 cores built from upstream source as is - one row each: a repository, a makefile path, make arguments |
-| `cores/patched/<name>.sh` | 7 cores that need more: a source patch, a build assertion, an `.info` fixup |
-| `cores/websrv/<name>.sh` | 7 cores whose scripts come from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch), kept close to the originals so upstream changes are easy to compare |
+| `cores/patched/<name>.sh` | 8 cores that need more: a source patch, a build assertion, an `.info` fixup, or a non-make build (`mgba` uses CMake) |
+| `cores/websrv/<name>.sh` | 7 cores whose scripts come from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch), kept close to the originals so upstream changes are easy to compare; local changes are marked in each script |
 | `cores/_common.sh` | shared fetch, cross-compile, verify and stage logic |
 | `cores/_matrix.py` | the core list as a build matrix for the release workflow |
 
@@ -145,7 +146,7 @@ The cores are **not** all under the same licence:
 
 | Core | Licence |
 |---|---|
-| `fceumm`, `nestopia`, `gambatte`, `mednafen_gba`, `mednafen_psx`, `mednafen_pce_fast`, `mednafen_vb`, `mednafen_wswan`, `mednafen_ngp`, `pcsx_rearmed`, `desmume2015`, `parallel_n64`, `yabause`, `stella2023`, `prosystem`, `puae`, `puae2021`, `vice_x64`, `dosbox_pure` | GPLv2 |
+| `fceumm`, `nestopia`, `gambatte`, `mednafen_gba`, `mednafen_psx`, `mednafen_pce_fast`, `mednafen_vb`, `mednafen_wswan`, `mednafen_ngp`, `pcsx_rearmed`, `desmume2015`, `parallel_n64`, `yabause`, `stella2023`, `prosystem`, `puae`, `puae2021`, `vice_x64`, `dosbox_pure`, `prboom` | GPLv2 |
 | `virtualjaguar` | GPLv3 |
 | `mgba` | MPL 2.0 |
 | `handy` | Zlib |

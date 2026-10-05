@@ -180,7 +180,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            clang-18 lld-18 llvm-18 llvm-18-dev build-essential wget unzip \
+            clang-18 lld-18 llvm-18 llvm-18-dev build-essential cmake wget unzip \
             pkg-config python3
 
       - name: Build ${{ matrix.core }}

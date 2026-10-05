@@ -10,13 +10,13 @@ described at the end to refresh them.
 
 | | |
 |---|---|
-| Cores shipped | **33**: 19 typical (`cores/typical/table.txt`), 7 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
+| Cores shipped | **34**: 19 typical (`cores/typical/table.txt`), 8 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
 | Official Linux x86_64 cores | 244 |
-| Missing from the official set | 211 |
+| Missing from the official set | 210 |
 | Missing, but impossible here (hardware rendering) | 28 |
 | Missing, software-rendered emulators | 140 (roughly 100 once variants of shipped emulators are set aside) |
 | Pinned to a release | 1 (`dosbox_pure`) |
-| Tracking a branch head | 32 |
+| Tracking a branch head | 33 |
 
 ## Recipe categories
 
@@ -26,8 +26,8 @@ Every core is defined in exactly one of three places under `cores/`;
 | Category | Location | Cores | What it means |
 |---|---|---|---|
 | typical | `typical/table.txt` | 19 | Upstream source built as is with the shared flags in `_common.sh`: one row naming a repository, makefile path and make arguments. |
-| patched | `patched/<name>.sh` | 7 | Needs a source patch, a build assertion or an `.info` fixup. `parallel_n64` and `picodrive` use `_common.sh` with hooks; the other five fetch and build on their own. |
-| websrv | `websrv/<name>.sh` | 7 | Taken from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch) (`build-<name>.sh` there). The only change is the staging path, so upstream changes can be compared directly. `puae2021`'s `key_t` patch is websrv's own. |
+| patched | `patched/<name>.sh` | 8 | Needs a source patch, a build assertion, an `.info` fixup or a non-make build. `parallel_n64` and `picodrive` use `_common.sh` with hooks; `mgba` builds with CMake and reuses `_common.sh` for the environment and the loadability check; the other five fetch and build on their own. |
+| websrv | `websrv/<name>.sh` | 7 | Taken from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch) (`build-<name>.sh` there), changed as little as possible so upstream changes can be compared directly: the staging path everywhere, plus the compiler flags in `snes9x2010` (see below). `puae2021`'s `key_t` patch is websrv's own. |
 
 The websrv and standalone patched scripts do not use `_common.sh`, so they skip
 its local loadability check (the release workflow still checks every core) and
@@ -58,7 +58,7 @@ snapshot date.
 | `snes9x` | SNES | libretro/snes9x | master | 2026-09-19 | typical | Non-commercial |
 | `snes9x2010` | SNES (lighter fork) | libretro/snes9x2010 | master | 2026-09-21 | websrv | Non-commercial |
 | `gambatte` | Game Boy / Color | libretro/gambatte-libretro | master | 2026-08-21 | typical | GPLv2 |
-| `mgba` | GB / GBC / GBA | libretro/mgba | master | 2026-09-17 | typical | MPL 2.0 |
+| `mgba` | GB / GBC / GBA | libretro/mgba | master | 2026-09-17 | patched | MPL 2.0 |
 | `mednafen_gba` | Game Boy Advance | libretro/beetle-gba-libretro | master | 2026-09-03 | websrv | GPLv2 |
 | `desmume2015` | Nintendo DS | libretro/desmume2015 | master | 2026-08-23 | patched | GPLv2 |
 | `parallel_n64` | Nintendo 64 | libretro/parallel-n64 | master | 2026-10-05 | patched | GPLv2 |
@@ -112,6 +112,17 @@ snapshot date.
 | `vice` (`vice_x64`) | Commodore 64 | libretro/vice-libretro | master | 2026-10-03 | websrv | GPLv2 |
 | `dosbox_pure` | MS-DOS / PC | codeberg.org/schelling/dosbox-pure | **1.0-preview6** | release 2026-07-14 | patched | GPLv2 |
 
+### Game engines
+
+| Core | System | Source | Ref | Last upstream commit | Recipe | Licence |
+|---|---|---|---|---|---|---|
+| `prboom` | Doom / Doom II / Final Doom / Freedoom | libretro/libretro-prboom | master | 2026-10-05 | typical | GPLv2 |
+
+`prboom` needs the game's own WAD files, which are not distributed here. Load an
+IWAD (`doom.wad`, `doom2.wad`, `tnt.wad`, `plutonia.wad`, `freedoom1.wad`,
+`freedoom2.wad`) or a PWAD add-on placed next to one; the engine's `prboom.wad`
+is compiled into the core, despite the older core-info note asking for it.
+
 ## What the recipes have to work around
 
 Every core passes through the same constraints of the payload environment. These
@@ -130,6 +141,15 @@ explain most of the per-core scripts:
   `_POSIX_C_SOURCE` that hides C99 maths (`desmume2015`), `*64` file calls and
   `std::tr1` (`mame2010`), `-lm` (`mame2003_plus`), a `key_t` typedef
   (`puae2021`), and `strtof_l` (`mgba`, via `shims/ps5-locale.h`).
+- **The toolchain identifies as FreeBSD** (`__FreeBSD__` = 9). Since
+  libretro-common gained thread naming, its `rthreads.c` calls
+  `pthread_set_name_np()` on FreeBSD without including `<pthread_np.h>`.
+  `shims/ps5-pthread-np.h` supplies just that prototype (the function itself is
+  exported by `libkernel_web.sprx`). `_common.sh` force-includes it for every
+  core it builds; `pcsx_rearmed` and `snes9x2010` add it themselves.
+  `snes9x2010` also takes `_common.sh`'s `CLOCK_REALTIME`/`CLOCK_MONOTONIC`
+  defines, because its `rthreads.c` pins `_POSIX_C_SOURCE 199309`, which hides
+  them. That makes it the one websrv script with a compiler-flag change.
 - **No physical CD-ROM.** Built with `HAVE_CDROM=0`; disc games load from images.
 - **Loadability.** Every staged `.so` must export the libretro entry points,
   import `libkernel_web.sprx` and not import `libkernel_sys.sprx`. See
@@ -169,13 +189,13 @@ official build and the same CPU architecture as the PS5. Each missing core was
 classified from its `.info` in
 [libretro-core-info](https://github.com/libretro/libretro-core-info).
 
-All 33 cores shipped here appear in the official list. The 211 that do not:
+All 34 cores shipped here appear in the official list. The 210 that do not:
 
 | Group | Count | Can it run here? |
 |---|---|---|
 | Hardware rendering required | 28 | **No.** No GL context. |
 | No `.info` (a CI log, unreleased or retired cores) | 6 | Not real candidates |
-| Game and engine ports | 29 | Probably. Most are software-rendered. |
+| Game and engine ports | 28 | Probably. Most are software-rendered. |
 | Media players and utilities | 8 | Low value |
 | Software-rendered emulators | 140 | Plausibly. 18 are flagged experimental. |
 
@@ -235,11 +255,11 @@ These are the real gaps: every core for them is software-rendered and missing.
 ### Game and engine ports
 
 `scummvm` is the most valuable single addition: hundreds of adventure games
-from one core. After it, the cheap ones are `prboom` (Doom), `tyrquake` (Quake),
+from one core. After it, the cheap ones are `tyrquake` (Quake),
 `ecwolf` (Wolfenstein 3D), `nxengine` (Cave Story, which also bundles its data),
 `easyrpg` (RPG Maker 2000/2003), `cannonball` (OutRun), `mrboom` and `tic80`.
 The full list: 2048, anarch, cannonball, chailove, craft, dinothawr, easyrpg,
-ecwolf, gong, jumpnbump, lowresnx, lutro, mrboom, nxengine, prboom,
+ecwolf, gong, jumpnbump, lowresnx, lutro, mrboom, nxengine,
 reminiscence, scummvm, superbroswar, tic80, tyrquake, uw8, vemulator,
 vitaquake2 (and its rogue, xatrix and zaero builds), vitaquake3, wasm4, xrick.
 
@@ -250,8 +270,8 @@ vitaquake2 (and its rogue, xatrix and zaero builds), vitaquake3, wasm4, xrick.
    `np2kai`, `px68k`, `gearcoleco`, `freeintv`, `o2em`, `neocd`, `pokemini`.
    Most are small C/C++ cores with a plain libretro makefile, so many should
    fit as a single row in `cores/typical/table.txt`.
-2. **Add `scummvm`**, then the light game ports (`prboom`, `tyrquake`,
-   `nxengine`, `ecwolf`, `easyrpg`).
+2. **Add `scummvm`**, then the light game ports (`tyrquake`, `nxengine`,
+   `ecwolf`, `easyrpg`). `prboom` (Doom) has since been added.
 3. **Add accuracy alternatives selectively** (`mesen`, `sameboy`, `blastem`),
    watching CPU cost. Without a recompiler there is no headroom for the heaviest
    accuracy cores.
