@@ -10,7 +10,7 @@ described at the end to refresh them.
 
 | | |
 |---|---|
-| Cores shipped | **34**: 19 typical (`cores/typical/table.txt`), 8 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
+| Cores shipped | **34**: 18 typical (`cores/typical/table.txt`), 9 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
 | Official Linux x86_64 cores | 244 |
 | Missing from the official set | 210 |
 | Missing, but impossible here (hardware rendering) | 28 |
@@ -25,8 +25,8 @@ Every core is defined in exactly one of three places under `cores/`;
 
 | Category | Location | Cores | What it means |
 |---|---|---|---|
-| typical | `typical/table.txt` | 19 | Upstream source built as is with the shared flags in `_common.sh`: one row naming a repository, makefile path and make arguments. |
-| patched | `patched/<name>.sh` | 8 | Needs a source patch, a build assertion, an `.info` fixup or a non-make build. `parallel_n64` and `picodrive` use `_common.sh` with hooks; `mgba` builds with CMake and reuses `_common.sh` for the environment and the loadability check; the other five fetch and build on their own. |
+| typical | `typical/table.txt` | 18 | Upstream source built as is with the shared flags in `_common.sh`: one row naming a repository, makefile path and make arguments. |
+| patched | `patched/<name>.sh` | 9 | Needs a source patch, a build assertion, an `.info` fixup or a non-make build. `parallel_n64`, `picodrive` and `prboom` use `_common.sh` with hooks (`prboom` through `core_pre_build`, to drop a makefile define); `mgba` builds with CMake and reuses `_common.sh` for the environment and the loadability check; the other five fetch and build on their own. |
 | websrv | `websrv/<name>.sh` | 7 | Taken from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch) (`build-<name>.sh` there), changed as little as possible so upstream changes can be compared directly: the staging path everywhere, plus the compiler flags in `snes9x2010` (see below). `puae2021`'s `key_t` patch is websrv's own. |
 
 The websrv and standalone patched scripts do not use `_common.sh`, so they skip
@@ -116,7 +116,7 @@ snapshot date.
 
 | Core | System | Source | Ref | Last upstream commit | Recipe | Licence |
 |---|---|---|---|---|---|---|
-| `prboom` | Doom / Doom II / Final Doom / Freedoom | libretro/libretro-prboom | master | 2026-10-05 | typical | GPLv2 |
+| `prboom` | Doom / Doom II / Final Doom / Freedoom | libretro/libretro-prboom | master | 2026-10-05 | patched | GPLv2 |
 
 `prboom` needs the game's own WAD files, which are not distributed here. Load an
 IWAD (`doom.wad`, `doom2.wad`, `tnt.wad`, `plutonia.wad`, `freedoom1.wad`,
@@ -138,7 +138,9 @@ explain most of the per-core scripts:
   core whose `.info` declares `hw_render = "true"` is rejected at staging.
   `parallel_n64` is built with `HAVE_OPENGL=0` and no GLideN64/Glide64.
 - **BSD-flavoured libc.** Several scripts patch out glibc or Linux assumptions:
-  `_POSIX_C_SOURCE` that hides C99 maths (`desmume2015`), `*64` file calls and
+  `_POSIX_C_SOURCE` that hides C99 maths (`desmume2015`) or `snprintf`,
+  `strdup` and `madvise` (`prboom`, whose makefile counts on glibc's
+  `_DEFAULT_SOURCE` to undo it), `*64` file calls and
   `std::tr1` (`mame2010`), `-lm` (`mame2003_plus`), a `key_t` typedef
   (`puae2021`), and `strtof_l` (`mgba`, via `shims/ps5-locale.h`).
 - **The toolchain identifies as FreeBSD** (`__FreeBSD__` = 9). Since

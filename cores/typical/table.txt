@@ -62,8 +62,3 @@ puae|libretro/libretro-uae||||
 fbalpha2012_cps1|libretro/fbalpha2012_cps1||makefile.libretro||
 fbalpha2012_cps2|libretro/fbalpha2012_cps2||makefile.libretro||
 fbalpha2012_neogeo|libretro/fbalpha2012_neogeo||makefile.libretro||
-
-# --- Game engines -----------------------------------------------------------
-# Doom, Doom II, Final Doom, Freedoom and PWAD add-ons. Bring your own WADs;
-# the engine's own prboom.wad is compiled into the core.
-prboom|libretro/libretro-prboom||||

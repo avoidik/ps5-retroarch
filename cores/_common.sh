@@ -28,6 +28,8 @@
 #   MAKE_ARGS      array of extra make arguments
 #
 # Optional hooks a recipe may define:
+#   core_pre_build          called in the source root, before make - for source
+#                           or makefile patches
 #   core_post_build <so>    called in the build directory, before staging
 #   core_post_info  <info>  called on the downloaded .info, before it is checked
 
@@ -111,6 +113,10 @@ build_libretro_core() {
             echo "error: $core: the archive extracted no source directory"
             return 1
         fi
+    fi
+
+    if declare -F core_pre_build >/dev/null; then
+        ( cd "$src" && core_pre_build ) || return 1
     fi
 
     # platform=unix keeps the libretro makefiles on their .so/-fPIC path.
