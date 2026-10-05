@@ -195,11 +195,13 @@ jobs:
           sudo apt-get -o Acquire::Retries=5 update
           sudo apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
             clang-18 lld-18 llvm-18 llvm-18-dev build-essential cmake wget unzip \
-            pkg-config python3 autoconf automake libtool libtool-bin
+            pkg-config python3 autoconf automake libtool libtool-bin ninja-build
         # autoconf/automake/libtool: cores that build bundled dependencies run
         # their autogen.sh (dosbox_core's FLAC). Ubuntu's libtool package only
         # has libtoolize; the libtool program autogen.sh checks for is in
-        # libtool-bin.
+        # libtool-bin. ninja-build: dosbox_core configures its CMake
+        # dependencies with -G Ninja (the runner image happens to ship ninja,
+        # but nothing guarantees it).
 
       - name: Retry downloads
         # Every recipe fetches with wget - the websrv and standalone scripts

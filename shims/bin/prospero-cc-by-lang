@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#
+# Run prospero-clang++ when the command line compiles C++ (-x c++), otherwise
+# prospero-clang.
+#
+# For makefiles that drive C and C++ sources through one compiler variable by
+# switching -x (MAME 2015's REALCC). The C wrapper cannot simply be given
+# libc++'s headers: it puts the C headers first, and libc++ refuses to work
+# behind them; the C++ wrapper treats every .c input as C++. Choosing per
+# command keeps both right.
+
+lang=c
+prev=
+for arg in "$@"; do
+    if [[ "$prev" == "-x" ]]; then
+        lang="$arg"
+    elif [[ "$arg" == -x?* ]]; then
+        lang="${arg#-x}"
+    fi
+    prev="$arg"
+done
+
+case "$lang" in
+    c++|c++-header) exec "${PS5_PAYLOAD_SDK:?}/bin/prospero-clang++" "$@" ;;
+    *)              exec "${PS5_PAYLOAD_SDK:?}/bin/prospero-clang" "$@" ;;
+esac

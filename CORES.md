@@ -270,17 +270,24 @@ explain most of the per-core scripts:
   (C++17 dropped `register`; `81`). `cdi2015` drops MAME 2015's
   `malloc`/`realloc` macros, which break libc++'s own headers, and builds with
   `SDLMAME_NO64BITIO` and `NO_AFFINITY_NP` (glibc's `stat64`/`readdir64` and
-  `cpu_set_t`, as in `mame2010`), maps its bundled FLAC's `fopen64`/
-  `fseeko64`/`ftello64`/`fstat64` onto the plain (already 64-bit) calls, links
-  libc++ instead of the makefile's `-lstdc++`, and
+  `cpu_set_t`, as in `mame2010`), links libc++ instead of the makefile's
+  `-lstdc++`, compiles MAME 2015's
+  third-party libraries with the PS5 toolchain instead of the host `gcc` its
+  makefile defaults `REALCC` to (through `shims/bin/prospero-cc-by-lang`, which
+  picks `prospero-clang` or `prospero-clang++` per command because some of
+  those "C" files are built with `-x c++`), and
   `mednafen_supafaust` turns off its glibc-only CPU-affinity code.
 - **Bundled dependencies built with autoconf** need to be told they are
   cross-compiling: `dosbox_core` and `dosbox_svn` pass
   `TARGET_TRIPLET=x86_64-unknown-freebsd` (their makefiles hand it to
   `configure --host`), and the CI runners install autoconf, automake, libtool
   and libtool-bin (the `libtool` program itself) for the dependencies that run
-  `autogen.sh`. `dosbox_core` builds its own SDL 1.2 (`BUNDLED_SDL=1`, as
-  `dosbox_svn` does) and drops FLAC's command-line and test
+  `autogen.sh`, plus ninja-build for those configured with CMake's Ninja
+  generator. `dosbox_core` builds its own SDL 1.2 (`BUNDLED_SDL=1`, as
+  `dosbox_svn` does), turns off ALSA MIDI (`WITH_ALSA_MIDI=0`; its makefile
+  checks the build machine's OS), builds all its dependencies in a first
+  `make deps` run (`MAKE_FIRST` in `_common.sh`: its makefile reads
+  pkg-config before they exist), and drops FLAC's command-line and test
   programs before configuring: FLAC 1.3.4 has no `--disable-programs`, and
   `flac` needs `wcswidth()`, which this libc lacks.
 - **The SDK environment exports `DESTDIR`** (its sysroot) for its own library

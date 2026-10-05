@@ -27,6 +27,9 @@
 #   SO             expected output                       (default ${CORE}_libretro.so)
 #   EXTRA_DEFINES  appended to CC and CXX
 #   MAKE_ARGS      array of extra make arguments
+#   MAKE_FIRST     array of make targets built in a separate make run, with the
+#                  same arguments, before the main one - for makefiles that
+#                  read pkg-config at parse time for dependencies they build
 #
 # CMake cores call build_cmake_libretro_core instead, which takes the same
 # CORE, REPO, BRANCH, FETCH, SO and EXTRA_DEFINES, plus:
@@ -302,20 +305,27 @@ build_libretro_core() {
     #
     # MAKE_ARGS come last so a recipe can override any of these.
     defines=$(core_defines)
-    (
-        cd "$SRC/$make_dir" || exit 1
-        "$MAKE" -f "$makefile" \
-                platform=unix \
-                DEBUG=0 \
-                fpic="-fPIC" \
-                HAVE_CDROM=0 \
-                CC="$CC $defines" \
-                CXX="$CXX $defines" \
-                AR="$AR" \
-                RANLIB="$RANLIB" \
-                -j"$(nproc)" \
-                "${MAKE_ARGS[@]}"
-    ) || return 1
+    run_make() {
+        (
+            cd "$SRC/$make_dir" || exit 1
+            "$MAKE" -f "$makefile" \
+                    platform=unix \
+                    DEBUG=0 \
+                    fpic="-fPIC" \
+                    HAVE_CDROM=0 \
+                    CC="$CC $defines" \
+                    CXX="$CXX $defines" \
+                    AR="$AR" \
+                    RANLIB="$RANLIB" \
+                    -j"$(nproc)" \
+                    "${MAKE_ARGS[@]}" \
+                    "$@"
+        )
+    }
+    if (( ${#MAKE_FIRST[@]} )); then
+        run_make "${MAKE_FIRST[@]}" || return 1
+    fi
+    run_make || return 1
 
     out=$(find_core_output "$SRC/$make_dir" "$so") || return 1
     stage_core "$out"

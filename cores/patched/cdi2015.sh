@@ -36,18 +36,17 @@ core_pre_build() {
 # (stat64, readdir64, open64, pread64) unless SDLMAME_NO64BITIO is set; this
 # libc's plain calls are 64-bit already. NO_AFFINITY_NP skips the thread-affinity
 # code, which uses glibc's cpu_set_t API. mame2010 sets both.
-#
-# Its bundled FLAC calls glibc's large-file functions (fopen64, fseeko64,
-# ftello64, fstat64), which this libc does not export - its plain ones are
-# 64-bit already - so map them onto those.
 EXTRA_DEFINES="-DSDLMAME_NO64BITIO -DNO_AFFINITY_NP"
-EXTRA_DEFINES+=" -Dfopen64=fopen -Dfseeko64=fseeko -Dftello64=ftello"
-EXTRA_DEFINES+=" -Dfstat64=fstat -Dstat64=stat"
 
+# REALCC compiles the third-party libraries (FLAC, zlib, expat, softfloat,
+# ...) and defaults to the host's gcc, which would link Linux objects into the
+# core. Some of them are C, some are compiled as C++ with -x c++ (softfloat),
+# so shims/bin/prospero-cc-by-lang picks the C or C++ compiler per command.
 MAKE_ARGS=(
     PTR64=1
     SUBTARGET=cdi
     CC="$CXX $(core_defines)"
+    REALCC="${ROOT_DIR}/shims/bin/prospero-cc-by-lang $(core_defines)"
 )
 
 build_libretro_core || exit 1
