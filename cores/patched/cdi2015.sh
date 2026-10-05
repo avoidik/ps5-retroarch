@@ -27,8 +27,9 @@ core_pre_build() {
 
 # The retro OSD's file and directory code uses glibc's large-file names
 # (stat64, readdir64, open64, pread64) unless SDLMAME_NO64BITIO is set; this
-# libc's plain calls are 64-bit already. mame2010 sets the same define.
-EXTRA_DEFINES="-DSDLMAME_NO64BITIO"
+# libc's plain calls are 64-bit already. NO_AFFINITY_NP skips the thread-affinity
+# code, which uses glibc's cpu_set_t API. mame2010 sets both.
+EXTRA_DEFINES="-DSDLMAME_NO64BITIO -DNO_AFFINITY_NP"
 
 MAKE_ARGS=(
     PTR64=1

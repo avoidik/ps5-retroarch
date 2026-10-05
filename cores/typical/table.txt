@@ -126,15 +126,6 @@ o2em|libretro/libretro-o2em||||
 freeintv|libretro/FreeIntv||||
 
 # --- Microsoft ----------------------------------------------------------
-# No JIT on this target: WITH_DYNAREC= selects the interpreter. The recipe's
-# download_github_linux64 fetches prebuilt Linux libraries, so it is dropped;
-# the dependencies are built from deps/ instead.
-# TARGET_TRIPLET makes its bundled dependencies' autoconf configure
-# cross-compile (--host); without it configure treats the build as native and
-# tries to run PS5 test programs. CC/CXX/AR/RANLIB from _common.sh still win
-# over the triplet-prefixed names; PKGCONFIG keeps the host pkg-config, which
-# finds the dependencies it just built under deps_bin.
-dosbox_core|libretro/dosbox-core|libretro|Makefile.libretro|WITH_DYNAREC= TARGET_TRIPLET=x86_64-unknown-freebsd PKGCONFIG=pkg-config||libretro
 # No JIT on this target: WITH_DYNAREC= selects the interpreter (the recipe
 # builds the x86_64 recompiler). BUNDLED_SDL=1 builds its own SDL 1.2 and
 # SDL_net: the sysroot only has SDL2.

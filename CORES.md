@@ -10,7 +10,7 @@ described at the end to refresh them.
 
 | Item | Value |
 |---|---|
-| Cores shipped | **115**: 88 typical (`cores/typical/table.txt`), 20 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
+| Cores shipped | **115**: 87 typical (`cores/typical/table.txt`), 21 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
 | Added on 2026-10-05 | 81 software-rendered emulators, not yet built in CI at the time of writing (see [Emulators added on 2026-10-05](#emulators-added-on-2026-10-05)) |
 | Official Linux x86_64 cores | 244, of which all 115 shipped here are part |
 | Missing from the official set | 129 - see [Coverage](#coverage-against-the-official-distribution) |
@@ -24,8 +24,8 @@ Every core is defined in exactly one of three places under `cores/`;
 
 | Category | Location | Cores | What it means |
 |---|---|---|---|
-| typical | `typical/table.txt` | 88 | Upstream source built as is with the shared flags in `_common.sh`: one row naming a repository, makefile path and make arguments. |
-| patched | `patched/<name>.sh` | 20 | Needs a source patch, a build assertion, an `.info` fixup or a non-make build. `parallel_n64`, `picodrive`, `prboom`, `mame2003`, `bsnes_hd_beta`, `same_cdi`, `mednafen_supafaust` and `cdi2015` use `_common.sh`'s make build with hooks (`core_pre_build` patches the makefile or a header for the last six; `cdi2015` also puts the C++ compiler back in `CC`); `bsnes` and `bsnes_hd_beta` pass the toolchain through nall's own `compiler` variable; `mgba`, `applewin`, `arduous`, `dirksimple`, `hatari` and `squirreljme` use `_common.sh`'s CMake build (`build_cmake_libretro_core`); the other five fetch and build on their own. |
+| typical | `typical/table.txt` | 87 | Upstream source built as is with the shared flags in `_common.sh`: one row naming a repository, makefile path and make arguments. |
+| patched | `patched/<name>.sh` | 21 | Needs a source patch, a build assertion, an `.info` fixup or a non-make build. `parallel_n64`, `picodrive`, `prboom`, `mame2003`, `bsnes_hd_beta`, `same_cdi`, `mednafen_supafaust`, `cdi2015` and `dosbox_core` use `_common.sh`'s make build with hooks (`core_pre_build` patches the makefile or a header for the last seven; `cdi2015` also puts the C++ compiler back in `CC`); `bsnes` and `bsnes_hd_beta` pass the toolchain through nall's own `compiler` variable; `mgba`, `applewin`, `arduous`, `dirksimple`, `hatari` and `squirreljme` use `_common.sh`'s CMake build (`build_cmake_libretro_core`); the other five fetch and build on their own. |
 | websrv | `websrv/<name>.sh` | 7 | Taken from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch) (`build-<name>.sh` there), changed as little as possible so upstream changes can be compared directly: the staging path everywhere, plus the compiler flags in `snes9x2010` (see below). `puae2021`'s `key_t` patch is websrv's own. |
 
 The websrv and standalone patched scripts do not use `_common.sh`, so they skip
@@ -158,7 +158,7 @@ when they were added, so the first CI runs decide which need more work.
 | `vice_xpet` | Commodore - PET (VICE xpet) | libretro/vice-libretro | master | typical | GPLv2 |
 | `vice_xplus4` | Commodore - PLUS/4 (VICE xplus4) | libretro/vice-libretro | master | typical | GPLv2 |
 | `vice_xvic` | Commodore - VIC-20 (VICE xvic) | libretro/vice-libretro | master | typical | GPLv2 |
-| `dosbox_core` | DOS (DOSBox-core) | libretro/dosbox-core | libretro | typical | GPLv2 |
+| `dosbox_core` | DOS (DOSBox-core) | libretro/dosbox-core | libretro | patched | GPLv2 |
 | `dosbox_svn` | DOS (DOSBox-SVN) | libretro/dosbox-svn | libretro | typical | GPLv2 |
 | `bk` | Elektronika - BK-0010/BK-0011(M) | libretro/bk-emulator | master | typical | HPND |
 | `emuscv` | EPOCH/YENO Super Cassette Vision | gitlab.com/MaaaX-EmuSCV/libretro-emuscv | master | typical | GPLv3 |
@@ -265,14 +265,17 @@ explain most of the per-core scripts:
 - **Clang 18 / libc++ 18 strictness.** `_common.sh` also passes `-Wno-register`
   (C++17 dropped `register`; `81`). `cdi2015` drops MAME 2015's
   `malloc`/`realloc` macros, which break libc++'s own headers, and builds with
-  `SDLMAME_NO64BITIO` (glibc's `stat64`/`readdir64`, as in `mame2010`), and
+  `SDLMAME_NO64BITIO` and `NO_AFFINITY_NP` (glibc's `stat64`/`readdir64` and
+  `cpu_set_t`, as in `mame2010`), and
   `mednafen_supafaust` turns off its glibc-only CPU-affinity code.
 - **Bundled dependencies built with autoconf** need to be told they are
   cross-compiling: `dosbox_core` and `dosbox_svn` pass
   `TARGET_TRIPLET=x86_64-unknown-freebsd` (their makefiles hand it to
   `configure --host`), and the CI runners install autoconf, automake, libtool
   and libtool-bin (the `libtool` program itself) for the dependencies that run
-  `autogen.sh`.
+  `autogen.sh`. `dosbox_core` also drops FLAC's command-line and test
+  programs before configuring: FLAC 1.3.4 has no `--disable-programs`, and
+  `flac` needs `wcswidth()`, which this libc lacks.
 - **The SDK environment exports `DESTDIR`** (its sysroot) for its own library
   builds. `_common.sh` unsets it, or a core that `make install`s its bundled
   dependencies into its own tree (`dosbox_core`) has them re-rooted into the
