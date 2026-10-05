@@ -78,16 +78,17 @@ build_one() {
     fi
 
     (
-        local _name repo make_dir makefile args defines
-        IFS='|' read -r _name repo make_dir makefile args defines <<<"$row"
+        local _name repo make_dir makefile args defines branch
+        IFS='|' read -r _name repo make_dir makefile args defines branch <<<"$row"
 
         source "$CORES_DIR/_common.sh" || exit 1
 
         CORE="$name"
         REPO="$repo"
+        BRANCH="${branch:-master}"
         MAKE_DIR="${make_dir:-.}"
         MAKEFILE="${makefile:-Makefile}"
-        # The table may reference ${ROOT_DIR} in a define (mgba's shim path).
+        # The table may reference ${ROOT_DIR} in a define (a shim path).
         # Substituted rather than eval'd, so a row cannot run commands.
         EXTRA_DEFINES="${defines//\$\{ROOT_DIR\}/$ROOT_DIR}"
         read -r -a MAKE_ARGS <<<"$args"

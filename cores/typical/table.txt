@@ -7,12 +7,16 @@
 # Pipe-separated. Blank lines and #-comments are ignored. Trailing fields may be
 # left empty.
 #
-#   name | owner/repo | make_dir | makefile | make args | extra CC/CXX defines
+#   name | repo | make_dir | makefile | make args | extra CC/CXX defines | branch
 #
 #   name        also names the .so and the .info (<name>_libretro.*)
+#   repo        GitHub owner/repo, or gitlab.com/owner/repo
 #   make_dir    directory holding the libretro makefile, relative to the source
 #               root; empty means the root itself
 #   makefile    empty means Makefile
+#   make args   later arguments win, so these can override _common.sh's own
+#               (platform=unix, CC, ...) and the makefile's defaults
+#   branch      empty means master
 #
 # Add a core by adding a row. Nothing else needs to change - build-core.sh and
 # the release workflow (via ../_matrix.py) both read this file.
@@ -62,3 +66,150 @@ puae|libretro/libretro-uae||||
 fbalpha2012_cps1|libretro/fbalpha2012_cps1||makefile.libretro||
 fbalpha2012_cps2|libretro/fbalpha2012_cps2||makefile.libretro||
 fbalpha2012_neogeo|libretro/fbalpha2012_neogeo||makefile.libretro||
+
+# ============================================================================
+# Emulators added from libretro-super's recipes/linux/cores-linux-x64-generic
+# (2026-10-05): every software-rendered, non-experimental emulator in the
+# official x86_64 build that has a plain-make recipe there. The full MAME and
+# HBMAME builds are left out (hours to compile, very large cores).
+# ============================================================================
+
+# --- Amstrad ------------------------------------------------------------
+cap32|libretro/libretro-cap32||||
+crocods|libretro/libretro-crocods||||
+
+# --- Atari --------------------------------------------------------------
+a5200|libretro/a5200||||
+atari800|libretro/libretro-atari800||||
+hatari|libretro/hatari||Makefile.libretro||
+mednafen_lynx|libretro/beetle-lynx-libretro||||
+stella|stella-emu/stella|src/os/libretro|||
+stella2014|libretro/stella2014-libretro||||
+
+# --- Bandai -------------------------------------------------------------
+tamalibretro|celerizer/tamalibretro||||
+
+# --- Capcom -------------------------------------------------------------
+fbalpha2012_cps3|libretro/fbalpha2012_cps3|svn-current/trunk|makefile.libretro||
+
+# --- Coleco -------------------------------------------------------------
+jollycv|libretro/jollycv|libretro|||
+
+# --- Commodore ----------------------------------------------------------
+vice_x128|libretro/vice-libretro|||EMUTYPE=x128|
+vice_x64sc|libretro/vice-libretro|||EMUTYPE=x64sc|
+vice_xcbm2|libretro/vice-libretro|||EMUTYPE=xcbm2|
+vice_xcbm5x0|libretro/vice-libretro|||EMUTYPE=xcbm5x0|
+vice_xpet|libretro/vice-libretro|||EMUTYPE=xpet|
+vice_xplus4|libretro/vice-libretro|||EMUTYPE=xplus4|
+vice_xscpu64|libretro/vice-libretro|||EMUTYPE=xscpu64|
+vice_xvic|libretro/vice-libretro|||EMUTYPE=xvic|
+
+# --- Elektronika --------------------------------------------------------
+bk|libretro/bk-emulator||Makefile.libretro||
+
+# --- EPOCH/YENO ---------------------------------------------------------
+emuscv|gitlab.com/MaaaX-EmuSCV/libretro-emuscv||Makefile.libretro||
+
+# --- Fairchild ----------------------------------------------------------
+freechaf|libretro/FreeChaF||||
+
+# --- Lexaloffle ---------------------------------------------------------
+retro8|libretro/retro8||||
+
+# --- Magnavox -----------------------------------------------------------
+o2em|libretro/libretro-o2em||||
+
+# --- Mattel -------------------------------------------------------------
+freeintv|libretro/FreeIntv||||
+
+# --- Microsoft ----------------------------------------------------------
+# No JIT on this target: WITH_DYNAREC= selects the interpreter. The recipe's
+# download_github_linux64 fetches prebuilt Linux libraries, so it is dropped.
+dosbox_core|libretro/dosbox-core|libretro|Makefile.libretro|WITH_DYNAREC=||libretro
+# No JIT on this target: WITH_DYNAREC= selects the interpreter (the recipe
+# builds the x86_64 recompiler).
+dosbox_svn|libretro/dosbox-svn|libretro|Makefile.libretro|WITH_DYNAREC=||libretro
+
+# --- NEC ----------------------------------------------------------------
+mednafen_pce|libretro/beetle-pce-libretro||||
+mednafen_pcfx|libretro/beetle-pcfx-libretro||||
+mednafen_supergrafx|libretro/beetle-supergrafx-libretro||||
+nekop2|libretro/libretro-meowPC98|libretro|Makefile.libretro||
+np2kai|libretro/NP2kai|sdl|Makefile.libretro||
+quasi88|libretro/quasi88-libretro||||
+
+# --- Nintendo -----------------------------------------------------------
+gearboy|drhelius/Gearboy|platforms/libretro|||
+# No JIT on this target: the x86_64 recompiler is off, so this runs
+# gpSP's interpreter - expect it to be slower than mgba.
+gpsp|libretro/gpsp|||HAVE_DYNAREC=0|
+mednafen_supafaust|libretro/supafaust||||
+mesen|libretro/Mesen|Libretro|||
+mesen-s|libretro/Mesen-S|Libretro|||
+pokemini|libretro/PokeMini||||
+quicknes|libretro/QuickNES_Core||||
+sameboy|libretro/SameBoy|libretro||||buildbot
+snes9x2002|libretro/snes9x2002||||
+snes9x2005|libretro/snes9x2005||||
+snes9x2005_plus|libretro/snes9x2005|||USE_BLARGG_APU=1|
+tgbdual|libretro/tgbdual-libretro||||
+vba_next|libretro/vba-next||Makefile.libretro||
+vbam|libretro/vbam-libretro|src/libretro|||
+
+# --- Oracle Corporation -------------------------------------------------
+squirreljme|XerTheSquirrel/SquirrelJME|ratufacoat|makefilelibretro|||trunk
+
+# --- Palm ---------------------------------------------------------------
+mu|libretro/Mu|libretroBuildSystem|||
+
+# --- Philips ------------------------------------------------------------
+cdi2015|libretro/mame2015-libretro|||PTR64=1 SUBTARGET=cdi|
+same_cdi|libretro/same_cdi||Makefile.libretro||
+
+# --- Sega ---------------------------------------------------------------
+# BlastEm's 68K/Z80 cores are an x86 JIT; NEW_CORE=1 selects the generated
+# cores its aarch64 builds use instead, as there is no JIT on this target.
+blastem|libretro/blastem||Makefile.libretro|NEW_CORE=1||libretro
+clownmdemu|Clownacy/clownmdemu-libretro||||
+gearsystem|drhelius/Gearsystem|platforms/libretro|||
+genesis_plus_gx_wide|libretro/Genesis-Plus-GX-Wide||Makefile.libretro|||main
+mednafen_saturn|libretro/beetle-saturn-libretro||||
+smsplus|libretro/smsplus-gx||Makefile.libretro||
+
+# --- Sharp --------------------------------------------------------------
+px68k|libretro/px68k-libretro||Makefile.libretro||
+x1|libretro/xmil-libretro|libretro|Makefile.libretro||
+
+# --- Sinclair -----------------------------------------------------------
+81|libretro/81-libretro||||
+fuse|libretro/fuse-libretro||||
+
+# --- SNK ----------------------------------------------------------------
+geolith|libretro/geolith-libretro|libretro|||
+neocd|libretro/neocd_libretro||||
+race|libretro/RACE||||
+
+# --- Spectravideo -------------------------------------------------------
+bluemsx|libretro/blueMSX-libretro||Makefile.libretro||
+
+# --- Texas Instruments --------------------------------------------------
+numero|nbarkhina/numero||||
+
+# --- Thomson ------------------------------------------------------------
+theodore|Zlika/theodore||||
+
+# --- Uzebox -------------------------------------------------------------
+uzem|libretro/libretro-uzem||||
+
+# --- Various ------------------------------------------------------------
+dice|mittonk/dice-libretro|||||main
+fbalpha2012|libretro/fbalpha2012|svn-current/trunk|makefile.libretro||
+fmsx|libretro/fmsx-libretro||||
+gw|libretro/gw-libretro||||
+mame2000|libretro/mame2000-libretro||||
+mame2003|libretro/mame2003-libretro||||
+oberon|libretro/oberon-risc-emu||Makefile.libretro||
+
+# --- Watara -------------------------------------------------------------
+potator|libretro/potator|platform/libretro|||

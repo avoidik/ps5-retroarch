@@ -15,13 +15,21 @@ from pathlib import Path
 
 CORES_DIR = Path(__file__).resolve().parent
 SCRIPT_DIRS = ("patched", "websrv")
+# GitHub Actions refuses a matrix with more jobs than this.
+MATRIX_LIMIT = 256
 
 
 def table_names():
-    for line in (CORES_DIR / "typical" / "table.txt").read_text().splitlines():
+    table = CORES_DIR / "typical" / "table.txt"
+    for number, line in enumerate(table.read_text().splitlines(), 1):
         line = line.strip()
-        if line and not line.startswith("#"):
-            yield line.split("|", 1)[0]
+        if not line or line.startswith("#"):
+            continue
+        fields = line.split("|")
+        # name | repo | make_dir | makefile | make args | defines | branch
+        if len(fields) > 7 or not fields[0] or len(fields) < 2 or not fields[1]:
+            sys.exit(f"error: {table.name}:{number}: malformed row: {line}")
+        yield fields[0]
 
 
 def script_names():
@@ -36,5 +44,8 @@ if dupes:
     sys.exit("error: core defined more than once: " + " ".join(dupes))
 
 cores = sorted(names)
+if len(cores) > MATRIX_LIMIT:
+    sys.exit(f"error: {len(cores)} cores exceed the {MATRIX_LIMIT}-job matrix limit; "
+             "split the cores job")
 print("cores=" + json.dumps(cores))
 print(f"count={len(cores)}")

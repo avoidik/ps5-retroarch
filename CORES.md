@@ -8,15 +8,14 @@ described at the end to refresh them.
 
 ## At a glance
 
-| | |
+| Item | Value |
 |---|---|
-| Cores shipped | **34**: 18 typical (`cores/typical/table.txt`), 9 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
-| Official Linux x86_64 cores | 244 |
-| Missing from the official set | 210 |
-| Missing, but impossible here (hardware rendering) | 28 |
-| Missing, software-rendered emulators | 140 (roughly 100 once variants of shipped emulators are set aside) |
+| Cores shipped | **115**: 94 typical (`cores/typical/table.txt`), 14 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
+| Added on 2026-10-05 | 81 software-rendered emulators, not yet built in CI at the time of writing (see [Emulators added on 2026-10-05](#emulators-added-on-2026-10-05)) |
+| Official Linux x86_64 cores | 244, of which all 115 shipped here are part |
+| Missing from the official set | 129 - see [Coverage](#coverage-against-the-official-distribution) |
 | Pinned to a release | 1 (`dosbox_pure`) |
-| Tracking a branch head | 33 |
+| Tracking a branch head | 114 |
 
 ## Recipe categories
 
@@ -25,8 +24,8 @@ Every core is defined in exactly one of three places under `cores/`;
 
 | Category | Location | Cores | What it means |
 |---|---|---|---|
-| typical | `typical/table.txt` | 18 | Upstream source built as is with the shared flags in `_common.sh`: one row naming a repository, makefile path and make arguments. |
-| patched | `patched/<name>.sh` | 9 | Needs a source patch, a build assertion, an `.info` fixup or a non-make build. `parallel_n64`, `picodrive` and `prboom` use `_common.sh` with hooks (`prboom` through `core_pre_build`, to drop a makefile define); `mgba` builds with CMake and reuses `_common.sh` for the environment and the loadability check; the other five fetch and build on their own. |
+| typical | `typical/table.txt` | 94 | Upstream source built as is with the shared flags in `_common.sh`: one row naming a repository, makefile path and make arguments. |
+| patched | `patched/<name>.sh` | 14 | Needs a source patch, a build assertion, an `.info` fixup or a non-make build. `parallel_n64`, `picodrive` and `prboom` use `_common.sh`'s make build with hooks (`prboom` through `core_pre_build`, to drop a makefile define); `bsnes` and `bsnes_hd_beta` pass the toolchain through nall's own `compiler` variable; `mgba`, `applewin`, `arduous` and `dirksimple` use `_common.sh`'s CMake build (`build_cmake_libretro_core`); the other five fetch and build on their own. |
 | websrv | `websrv/<name>.sh` | 7 | Taken from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch) (`build-<name>.sh` there), changed as little as possible so upstream changes can be compared directly: the staging path everywhere, plus the compiler flags in `snes9x2010` (see below). `puae2021`'s `key_t` patch is websrv's own. |
 
 The websrv and standalone patched scripts do not use `_common.sh`, so they skip
@@ -123,6 +122,98 @@ IWAD (`doom.wad`, `doom2.wad`, `tnt.wad`, `plutonia.wad`, `freedoom1.wad`,
 `freedoom2.wad`) or a PWAD add-on placed next to one; the engine's `prboom.wad`
 is compiled into the core, despite the older core-info note asking for it.
 
+### Emulators added on 2026-10-05
+
+Generated from libretro-super's `recipes/linux/cores-linux-x64-generic`: every
+software-rendered, non-experimental emulator in the official x86_64 build with a
+make or CMake recipe there, except the full MAME/HBMAME builds and `rustynes`
+(Rust; no Rust toolchain targets the PS5). None had been built for this target
+when they were added, so the first CI runs decide which need more work.
+
+| Core | System | Source | Branch | Recipe | Licence |
+|---|---|---|---|---|---|
+| `crocods` | Amstrad - CPC (CrocoDS) | libretro/libretro-crocods | master | typical | MIT |
+| `cap32` | Amstrad - CPC/GX4000 (Caprice32) | libretro/libretro-cap32 | master | typical | GPLv2 |
+| `applewin` | Apple II (AppleWin) | audetto/AppleWin | master | patched | GPLv2 |
+| `dice` | Arcade (DICE) | mittonk/dice-libretro | main | typical | GPLv3 |
+| `fbalpha2012_cps3` | Arcade (FB Alpha 2012 CPS-3) | libretro/fbalpha2012_cps3 | master | typical | Non-commercial |
+| `fbalpha2012` | Arcade (FB Alpha 2012) | libretro/fbalpha2012 | master | typical | Non-commercial |
+| `mame2000` | Arcade (MAME 2000) | libretro/mame2000-libretro | master | typical | MAME |
+| `mame2003` | Arcade (MAME 2003) | libretro/mame2003-libretro | master | typical | MAME |
+| `arduous` | Arduboy (Arduous) | libretro/arduous | main | patched | GPLv3 |
+| `stella2014` | Atari - 2600 (Stella 2014) | libretro/stella2014-libretro | master | typical | GPLv2 |
+| `stella` | Atari - 2600 (Stella) | stella-emu/stella | master | typical | GPLv2 |
+| `atari800` | Atari - 400/800/600XL/800XL/130XE/5200 (Atari800) | libretro/libretro-atari800 | master | typical | GPLv2 |
+| `a5200` | Atari - 5200 (a5200) | libretro/a5200 | master | typical | GPLv2 |
+| `mednafen_lynx` | Atari - Lynx (Beetle Lynx) | libretro/beetle-lynx-libretro | master | typical | Zlib / GPLv2 |
+| `hatari` | Atari - ST / STE / TT / Falcon (Hatari) | libretro/hatari | master | typical | GPLv2 |
+| `tamalibretro` | Bandai - Tamagotchi P1 (TamaLIBretro) | celerizer/tamalibretro | master | typical | GPL-2.0 |
+| `jollycv` | ColecoVision/CreatiVision/My Vision (JollyCV) | libretro/jollycv | master | typical | BSD-3-Clause, MIT |
+| `vice_x128` | Commodore - C128 (VICE x128) | libretro/vice-libretro | master | typical | GPLv2 |
+| `vice_x64sc` | Commodore - C64 (VICE x64sc, accurate) | libretro/vice-libretro | master | typical | GPLv2 |
+| `vice_xscpu64` | Commodore - C64 SuperCPU (VICE xscpu64) | libretro/vice-libretro | master | typical | GPLv2 |
+| `vice_xcbm5x0` | Commodore - CBM-II 5x0 (VICE xcbm5x0) | libretro/vice-libretro | master | typical | GPLv2 |
+| `vice_xcbm2` | Commodore - CBM-II 6x0/7x0 (VICE xcbm2) | libretro/vice-libretro | master | typical | GPLv2 |
+| `vice_xpet` | Commodore - PET (VICE xpet) | libretro/vice-libretro | master | typical | GPLv2 |
+| `vice_xplus4` | Commodore - PLUS/4 (VICE xplus4) | libretro/vice-libretro | master | typical | GPLv2 |
+| `vice_xvic` | Commodore - VIC-20 (VICE xvic) | libretro/vice-libretro | master | typical | GPLv2 |
+| `dosbox_core` | DOS (DOSBox-core) | libretro/dosbox-core | libretro | typical | GPLv2 |
+| `dosbox_svn` | DOS (DOSBox-SVN) | libretro/dosbox-svn | libretro | typical | GPLv2 |
+| `bk` | Elektronika - BK-0010/BK-0011(M) | libretro/bk-emulator | master | typical | HPND |
+| `emuscv` | EPOCH/YENO Super Cassette Vision | gitlab.com/MaaaX-EmuSCV/libretro-emuscv | master | typical | GPLv3 |
+| `freechaf` | Fairchild - ChannelF (FreeChaF) | libretro/FreeChaF | master | typical | GPLv3 |
+| `gw` | Handheld Electronic (GW) | libretro/gw-libretro | master | typical | zlib |
+| `squirreljme` | Java ME (SquirrelJME) | XerTheSquirrel/SquirrelJME | trunk | typical | MPL-2.0 |
+| `dirksimple` | Laserdisc arcade game (DirkSimple) | icculus/DirkSimple | main | patched | zlib |
+| `o2em` | Magnavox - Odyssey2 / Philips Videopac+ (O2EM) | libretro/libretro-o2em | master | typical | Artistic License |
+| `freeintv` | Mattel - Intellivision (FreeIntv) | libretro/FreeIntv | master | typical | GPLv2+ |
+| `fmsx` | Microsoft - MSX (fMSX) | libretro/fmsx-libretro | master | typical | Non-commercial |
+| `bluemsx` | MSX/SVI/ColecoVision/SG-1000 (blueMSX) | libretro/blueMSX-libretro | master | typical | GPLv2 |
+| `mednafen_pce` | NEC - PC Engine / SuperGrafx / CD (Beetle PCE) | libretro/beetle-pce-libretro | master | typical | GPLv2 |
+| `mednafen_supergrafx` | NEC - PC Engine SuperGrafx (Beetle SuperGrafx) | libretro/beetle-supergrafx-libretro | master | typical | GPLv2 |
+| `quasi88` | NEC - PC-88 series (QUASI88) | libretro/quasi88-libretro | master | typical | BSD 3-Clause and MAME non-commercial |
+| `np2kai` | NEC - PC-98 (Neko Project II Kai) | libretro/NP2kai | master | typical | MIT |
+| `nekop2` | NEC - PC-98 (Neko Project II) | libretro/libretro-meowPC98 | master | typical | MIT |
+| `mednafen_pcfx` | NEC - PC-FX (Beetle PC-FX) | libretro/beetle-pcfx-libretro | master | typical | GPLv2 |
+| `gearboy` | Nintendo - Game Boy / Color (Gearboy) | drhelius/Gearboy | master | typical | GPLv3 |
+| `sameboy` | Nintendo - Game Boy / Color (SameBoy) | libretro/SameBoy | buildbot | typical | MIT |
+| `tgbdual` | Nintendo - Game Boy / Color (TGB Dual) | libretro/tgbdual-libretro | master | typical | GPLv2 |
+| `gpsp` | Nintendo - Game Boy Advance (gpSP) | libretro/gpsp | master | typical | GPLv2 |
+| `vba_next` | Nintendo - Game Boy Advance (VBA Next) | libretro/vba-next | master | typical | GPLv2 |
+| `vbam` | Nintendo - Game Boy Advance (VBA-M) | libretro/vbam-libretro | master | typical | GPLv2 |
+| `mesen` | Nintendo - NES / Famicom (Mesen) | libretro/Mesen | master | typical | GPLv3 |
+| `quicknes` | Nintendo - NES / Famicom (QuickNES) | libretro/QuickNES_Core | master | typical | LGPLv2.1+ |
+| `pokemini` | Nintendo - Pokemon Mini (PokeMini) | libretro/PokeMini | master | typical | GPLv3 |
+| `mednafen_supafaust` | Nintendo - SNES / SFC (Beetle Supafaust) | libretro/supafaust | master | typical | GPLv2+ |
+| `bsnes` | Nintendo - SNES / SFC (bsnes) | libretro/bsnes-libretro | master | patched | GPLv3 |
+| `bsnes_hd_beta` | Nintendo - SNES / SFC (bsnes-hd beta) | DerKoun/bsnes-hd | master | patched | GPLv3 |
+| `snes9x2002` | Nintendo - SNES / SFC (Snes9x 2002) | libretro/snes9x2002 | master | typical | Non-commercial |
+| `snes9x2005_plus` | Nintendo - SNES / SFC (Snes9x 2005 Plus) | libretro/snes9x2005 | master | typical | Non-commercial |
+| `snes9x2005` | Nintendo - SNES / SFC (Snes9x 2005) | libretro/snes9x2005 | master | typical | Non-commercial |
+| `mesen-s` | Nintendo - SNES / SFC / Game Boy / Color (Mesen-S) | libretro/Mesen-S | master | typical | GPLv3 |
+| `oberon` | Oberon RISC Emulator | libretro/oberon-risc-emu | master | typical | ISC |
+| `mu` | Palm OS (Mu) | libretro/Mu | master | typical | CC BY-NC 3.0 US (Non-commercial) |
+| `same_cdi` | Philips - CDi (SAME CDi) | libretro/same_cdi | master | typical | GPLv2+ |
+| `cdi2015` | Philips CDi (CDi 2015) | libretro/mame2015-libretro | master | typical | GPLv2+ |
+| `retro8` | PICO-8 (Retro8) | libretro/retro8 | master | typical | GPLv3 |
+| `clownmdemu` | Sega - MD/CD (ClownMDEmu) | Clownacy/clownmdemu-libretro | master | typical | AGPLv3 |
+| `smsplus` | Sega - MS/GG (SMS Plus GX) | libretro/smsplus-gx | master | typical | GPLv2 |
+| `genesis_plus_gx_wide` | Sega - MS/GG/MD/CD (Genesis Plus GX Wide) | libretro/Genesis-Plus-GX-Wide | main | typical | Non-commercial |
+| `blastem` | Sega - MS/GG/MD/CD/32X (BlastEm) | libretro/blastem | libretro | typical | GPLv3 |
+| `gearsystem` | Sega - MS/GG/SG-1000 (Gearsystem) | drhelius/Gearsystem | master | typical | GPLv3 |
+| `mednafen_saturn` | Sega - Saturn (Beetle Saturn) | libretro/beetle-saturn-libretro | master | typical | GPLv2 |
+| `px68k` | Sharp - X68000 (PX68k) | libretro/px68k-libretro | master | typical | Custom Non-Commercial |
+| `x1` | Sharp X1 (X Millennium) | libretro/xmil-libretro | master | typical | BSD |
+| `81` | Sinclair - ZX 81 (EightyOne) | libretro/81-libretro | master | typical | GPLv3 |
+| `fuse` | Sinclair - ZX Spectrum (Fuse) | libretro/fuse-libretro | master | typical | GPLv3 |
+| `geolith` | SNK - Neo Geo AES/MVS/CD (Geolith) | libretro/geolith-libretro | master | typical | BSD-3-Clause, MIT |
+| `neocd` | SNK - Neo Geo CD (NeoCD) | libretro/neocd_libretro | master | typical | LGPLv3 |
+| `race` | SNK - Neo Geo Pocket / Color (RACE) | libretro/RACE | master | typical | GPLv2 |
+| `numero` | Texas Instruments TI-83 (Numero) | nbarkhina/numero | master | typical | GPLv2 |
+| `theodore` | Thomson - MO/TO (Theodore) | Zlika/theodore | master | typical | GPLv3 |
+| `uzem` | Uzebox (Uzem) | libretro/libretro-uzem | master | typical | MIT |
+| `potator` | Watara - Supervision (Potator) | libretro/potator | master | typical | Public Domain |
+
 ## What the recipes have to work around
 
 Every core passes through the same constraints of the payload environment. These
@@ -132,7 +223,12 @@ explain most of the per-core scripts:
   JIT or dynamic recompiler can run. `dosbox_pure` builds with
   `DISABLE_DYNAREC=1`, `picodrive` with `use_sh2drc=0`, `pcsx_rearmed` with
   `DYNAREC=0`; the first two also assert after the build that no recompiler
-  symbols survived. This is the main reason the heavier systems (N64, Saturn,
+  symbols survived. Among the added cores, `dosbox_svn` and `dosbox_core`
+  build with `WITH_DYNAREC=`, `gpsp` with `HAVE_DYNAREC=0` and `blastem`
+  with `NEW_CORE=1` (its generated 68K/Z80 cores instead of the x86 JIT).
+  A recompiler that is compiled in but never switched off would still build
+  and pass every check here, then fail on the console - that can only be
+  caught by testing there. This is the main reason the heavier systems (N64, Saturn,
   PS1 on `mednafen_psx`) will be slow.
 - **No GL context.** The frontend renders through SDL2's software renderer, so a
   core whose `.info` declares `hw_render = "true"` is rejected at staging.
@@ -179,6 +275,10 @@ Checked each recipe's upstream for newer releases on 2026-10-05.
 - **No other upstream has moved or been archived.** The latest commit on every
   other core is ordinary maintenance.
 
+The 81 cores added afterwards follow the branch libretro-super's recipe names
+for them (`master` for most; `main`, `libretro`, `buildbot` or `trunk` for
+twelve) and were not checked for releases individually.
+
 Tracking `master` has a cost: two builds a week apart can differ, and a broken
 upstream commit breaks the release. Pinning each recipe to a commit hash would
 make builds reproducible, at the price of updating the pins by hand.
@@ -191,15 +291,18 @@ official build and the same CPU architecture as the PS5. Each missing core was
 classified from its `.info` in
 [libretro-core-info](https://github.com/libretro/libretro-core-info).
 
-All 34 cores shipped here appear in the official list. The 210 that do not:
+All 115 cores shipped here appear in the official list. The 129 that do not:
 
-| Group | Count | Can it run here? |
+| Group | Count | Status |
 |---|---|---|
-| Hardware rendering required | 28 | **No.** No GL context. |
+| Hardware rendering required | 28 | **Cannot run here** - no GL context |
 | No `.info` (a CI log, unreleased or retired cores) | 6 | Not real candidates |
-| Game and engine ports | 28 | Probably. Most are software-rendered. |
-| Media players and utilities | 8 | Low value |
-| Software-rendered emulators | 140 | Plausibly. 18 are flagged experimental. |
+| Game and engine ports | 28 | Left out by choice (emulators only) |
+| Media players, streaming, utilities | 6 | Left out by choice |
+| Emulators without a libretro-super recipe | 44 | Possible; each needs its repository and build researched by hand |
+| Experimental emulators | 12 | Left out by choice |
+| Full MAME / HBMAME (`mame`, `hbmame`, `mame2015`, `mame2016`) | 4 | Left out: hours to compile, very large cores |
+| `rustynes` | 1 | Needs a Rust toolchain for the PS5 |
 
 **Ruled out (hardware rendering):** 3dengine, azahar, boom3, cemu, citra,
 citra2018, desmume, dolphin, doukutsu_rs, flycast, kronos, mednafen_psx_hw,
@@ -208,80 +311,37 @@ pcsx2, ppsspp, supermodel, swanstation, thepowdertoy, vecx, vircon32,
 yabasanshiro. This takes out every modern system (GameCube/Wii, PS2, PSP, 3DS,
 Dreamcast) and the GPU-accelerated variants of systems already covered.
 
-**Variants of emulators already shipped** account for about 40 of the 140:
-nine more VICE machines (x128, x64sc, PET, Plus/4, VIC-20, CBM-II, SCPU64), about
-thirteen bsnes and Snes9x builds, Stella 2014 and current, three more Hatari
-builds, three more DOSBox builds, and nine more MAME/FB Alpha versions. Adding
-them widens choice rather than coverage.
+**Emulators without a recipe (44).** Most are variants of systems already
+covered (seven more bsnes builds, `DoubleCherryGB`, `irogb`, `hatari2014`,
+`hatarib`, `fsuae`, `amiberry`, `dosbox`, `mame2003_midway`, `mesen2`,
+`noods`, `geargrafx`, `gearlynx`, `holani`, `tia`). The ones that would add a
+system: `gearcoleco` (ColecoVision ADAM), `minivmac` (68k Macintosh),
+`virtualxt` (IBM PC/XT), `ep128emu_core` (Enterprise 128), `m2000` (Philips
+P2000T), `sameduck` (Mega Duck), `pokketstation` (PocketStation), `pd777`
+(Epoch Cassette Vision), `amiarcadia` (Arcadia 2001), `jaxe` (CHIP-8),
+`mojozork` (Z-machine), and several electronic-dictionary and handheld
+emulators (`bbkemu`, `gam4980`, `wqxemu`, `nicaiemu`, `dingooemu`,
+`spmp8000emu`, `native32emu`, `mcsoftserve`, `vaporspec`, `skyemu`).
 
-### Systems with no core at all
-
-These are the real gaps: every core for them is software-rendered and missing.
-
-| System | Candidate cores |
-|---|---|
-| MSX / MSX2 | `bluemsx`, `fmsx` |
-| ZX Spectrum | `fuse` |
-| Amstrad CPC | `cap32`, `crocods` |
-| Atari ST / STE | `hatari` |
-| Atari 8-bit / 5200 | `atari800`, `a5200` |
-| NEC PC-98 | `np2kai`, `nekop2` |
-| NEC PC-88 | `quasi88` |
-| Sharp X68000 | `px68k` |
-| Apple II / early Macintosh | `applewin`, `minivmac` |
-| ColecoVision | `gearcoleco`, `jollycv` |
-| Intellivision | `freeintv` |
-| Odyssey² / Videopac | `o2em` |
-| Neo Geo CD | `neocd` |
-| PC-FX | `mednafen_pcfx` |
-| SuperGrafx | `mednafen_supergrafx`, `geargrafx` |
-| Pokémon Mini | `pokemini` |
-| Fairchild Channel F | `freechaf` |
-| Watara Supervision | `potator` |
-| Philips CD-i | `same_cdi`, `cdi2015` |
-| PICO-8 / TIC-80 fantasy consoles | `retro8`, `tic80` |
-
-### Stronger alternatives to shipped cores
-
-| Instead of / alongside | Candidate | Why |
-|---|---|---|
-| `fceumm`, `nestopia` | `mesen` | Most accurate NES core |
-| `snes9x` | `mesen-s`, `bsnes` | Accuracy; `bsnes` is heavy without a recompiler |
-| `gambatte` | `sameboy`, `gearboy` | SameBoy is the accuracy reference |
-| `mgba`, `mednafen_gba` | `gpsp`, `vba_next` | Lighter; `gpsp`'s speed comes from a JIT this target cannot use |
-| `genesis_plus_gx` | `blastem`, `clownmdemu` | Cycle-accurate Mega Drive |
-| `yabause` | `mednafen_saturn` | Far more accurate, but much heavier |
-| `mednafen_ngp` | `race` | Lighter Neo Geo Pocket |
-| `mame2003_plus`, `mame2010` | `mame2003`, `mame2015` | Other romset generations |
-
-### Game and engine ports
-
-`scummvm` is the most valuable single addition: hundreds of adventure games
-from one core. After it, the cheap ones are `tyrquake` (Quake),
-`ecwolf` (Wolfenstein 3D), `nxengine` (Cave Story, which also bundles its data),
-`easyrpg` (RPG Maker 2000/2003), `cannonball` (OutRun), `mrboom` and `tic80`.
-The full list: 2048, anarch, cannonball, chailove, craft, dinothawr, easyrpg,
-ecwolf, gong, jumpnbump, lowresnx, lutro, mrboom, nxengine,
-reminiscence, scummvm, superbroswar, tic80, tyrquake, uw8, vemulator,
-vitaquake2 (and its rogue, xatrix and zaero builds), vitaquake3, wasm4, xrick.
+**Game and engine ports (28):** 2048, anarch, cannonball, chailove, craft,
+dinothawr, easyrpg, ecwolf, gong, jumpnbump, lowresnx, lutro, mrboom, nxengine,
+reminiscence, scummvm, superbroswar, tic80, tyrquake, uw8, vemulator, vitaquake2
+(and its rogue, xatrix and zaero builds), vitaquake3, wasm4, xrick. `prboom`
+(Doom) is the one game engine shipped.
 
 ## Recommendations
 
-1. **Fill the system gaps first.** One core per uncovered system adds more than
-   any number of variants: `bluemsx`, `fuse`, `cap32`, `hatari`, `atari800`,
-   `np2kai`, `px68k`, `gearcoleco`, `freeintv`, `o2em`, `neocd`, `pokemini`.
-   Most are small C/C++ cores with a plain libretro makefile, so many should
-   fit as a single row in `cores/typical/table.txt`.
-2. **Add `scummvm`**, then the light game ports (`tyrquake`, `nxengine`,
-   `ecwolf`, `easyrpg`). `prboom` (Doom) has since been added.
-3. **Add accuracy alternatives selectively** (`mesen`, `sameboy`, `blastem`),
-   watching CPU cost. Without a recompiler there is no headroom for the heaviest
-   accuracy cores.
-4. **Expect porting work, not just table rows.** None of the candidates has been
-   built for this target. Typical blockers are the ones listed above: a JIT
-   that must be switched off, glibc-only calls, `-lm`/`-lrt` (CI provides empty
-   stub archives for these; a local SDK does not), and cores that quietly want
-   GL.
+1. **Get the 81 added cores through CI.** The release is blocked until every
+   core builds, by choice, so expect several rounds: the usual blockers are a
+   JIT that must be switched off, glibc-only calls or feature macros, missing
+   libraries in the sysroot (`applewin` needs yaml and minizip), output in an
+   unexpected place, and cores that quietly want GL.
+2. **Test the added cores on the console.** CI proves a core loads; it cannot
+   prove a recompiler is off or that the core is fast enough without one.
+3. **Then the emulators without a recipe** that add a system (`minivmac`,
+   `virtualxt`, `gearcoleco`, `ep128emu_core`, ...).
+4. **Game ports, if wanted:** `scummvm` first (hundreds of adventure games), then
+   `tyrquake`, `nxengine`, `ecwolf`, `easyrpg`.
 5. **Adding a core needs no workflow change.** The release workflow's `plan`
    job runs `cores/_matrix.py`, which builds the matrix and the expected core
    count from `cores/typical/table.txt`, `cores/patched/` and `cores/websrv/`.
@@ -289,6 +349,9 @@ vitaquake2 (and its rogue, xatrix and zaero builds), vitaquake3, wasm4, xrick.
 ## Refreshing this document
 
 - Shipped list: `./build-core.sh --list`.
+- Build recipes for candidate cores: libretro-super's
+  `recipes/linux/cores-linux-x64-generic` (name, repository, branch, build type,
+  makefile, directory, arguments).
 - Official list: `https://buildbot.libretro.com/nightly/linux/x86_64/latest/.index`,
   one `<core>_libretro.so.zip` per line.
 - Rendering requirements and categories: `hw_render` and `categories` in each

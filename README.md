@@ -1,6 +1,6 @@
 ﻿# RetroArch for jailbroken PS5
 
-Build recipes for a RetroArch payload for a jailbroken PS5, with 34 libretro
+Build recipes for a RetroArch payload for a jailbroken PS5, with 115 libretro
 cores.
 
 The PS5 port of RetroArch itself is **john-tornblom's**, distributed as part of
@@ -44,12 +44,96 @@ repository is that port plus extra cores; all of the porting work is his.
 | `vice_x64` | Commodore 64 |
 | `dosbox_pure` | MS-DOS / PC |
 | `prboom` | Doom / Doom II / Final Doom / Freedoom (bring your own WADs) |
+| `crocods` | Amstrad - CPC (CrocoDS) |
+| `cap32` | Amstrad - CPC/GX4000 (Caprice32) |
+| `applewin` | Apple II (AppleWin) |
+| `dice` | Arcade (DICE) |
+| `fbalpha2012_cps3` | Arcade (FB Alpha 2012 CPS-3) |
+| `fbalpha2012` | Arcade (FB Alpha 2012) |
+| `mame2000` | Arcade (MAME 2000) |
+| `mame2003` | Arcade (MAME 2003) |
+| `arduous` | Arduboy (Arduous) |
+| `stella2014` | Atari - 2600 (Stella 2014) |
+| `stella` | Atari - 2600 (Stella) |
+| `atari800` | Atari - 400/800/600XL/800XL/130XE/5200 (Atari800) |
+| `a5200` | Atari - 5200 (a5200) |
+| `mednafen_lynx` | Atari - Lynx (Beetle Lynx) |
+| `hatari` | Atari - ST / STE / TT / Falcon (Hatari) |
+| `tamalibretro` | Bandai - Tamagotchi P1 (TamaLIBretro) |
+| `jollycv` | ColecoVision/CreatiVision/My Vision (JollyCV) |
+| `vice_x128` | Commodore - C128 (VICE x128) |
+| `vice_x64sc` | Commodore - C64 (VICE x64sc, accurate) |
+| `vice_xscpu64` | Commodore - C64 SuperCPU (VICE xscpu64) |
+| `vice_xcbm5x0` | Commodore - CBM-II 5x0 (VICE xcbm5x0) |
+| `vice_xcbm2` | Commodore - CBM-II 6x0/7x0 (VICE xcbm2) |
+| `vice_xpet` | Commodore - PET (VICE xpet) |
+| `vice_xplus4` | Commodore - PLUS/4 (VICE xplus4) |
+| `vice_xvic` | Commodore - VIC-20 (VICE xvic) |
+| `dosbox_core` | DOS (DOSBox-core) |
+| `dosbox_svn` | DOS (DOSBox-SVN) |
+| `bk` | Elektronika - BK-0010/BK-0011(M) |
+| `emuscv` | EPOCH/YENO Super Cassette Vision |
+| `freechaf` | Fairchild - ChannelF (FreeChaF) |
+| `gw` | Handheld Electronic (GW) |
+| `squirreljme` | Java ME (SquirrelJME) |
+| `dirksimple` | Laserdisc arcade game (DirkSimple) |
+| `o2em` | Magnavox - Odyssey2 / Philips Videopac+ (O2EM) |
+| `freeintv` | Mattel - Intellivision (FreeIntv) |
+| `fmsx` | Microsoft - MSX (fMSX) |
+| `bluemsx` | MSX/SVI/ColecoVision/SG-1000 (blueMSX) |
+| `mednafen_pce` | NEC - PC Engine / SuperGrafx / CD (Beetle PCE) |
+| `mednafen_supergrafx` | NEC - PC Engine SuperGrafx (Beetle SuperGrafx) |
+| `quasi88` | NEC - PC-88 series (QUASI88) |
+| `np2kai` | NEC - PC-98 (Neko Project II Kai) |
+| `nekop2` | NEC - PC-98 (Neko Project II) |
+| `mednafen_pcfx` | NEC - PC-FX (Beetle PC-FX) |
+| `gearboy` | Nintendo - Game Boy / Color (Gearboy) |
+| `sameboy` | Nintendo - Game Boy / Color (SameBoy) |
+| `tgbdual` | Nintendo - Game Boy / Color (TGB Dual) |
+| `gpsp` | Nintendo - Game Boy Advance (gpSP) |
+| `vba_next` | Nintendo - Game Boy Advance (VBA Next) |
+| `vbam` | Nintendo - Game Boy Advance (VBA-M) |
+| `mesen` | Nintendo - NES / Famicom (Mesen) |
+| `quicknes` | Nintendo - NES / Famicom (QuickNES) |
+| `pokemini` | Nintendo - Pokemon Mini (PokeMini) |
+| `mednafen_supafaust` | Nintendo - SNES / SFC (Beetle Supafaust) |
+| `bsnes` | Nintendo - SNES / SFC (bsnes) |
+| `bsnes_hd_beta` | Nintendo - SNES / SFC (bsnes-hd beta) |
+| `snes9x2002` | Nintendo - SNES / SFC (Snes9x 2002) |
+| `snes9x2005_plus` | Nintendo - SNES / SFC (Snes9x 2005 Plus) |
+| `snes9x2005` | Nintendo - SNES / SFC (Snes9x 2005) |
+| `mesen-s` | Nintendo - SNES / SFC / Game Boy / Color (Mesen-S) |
+| `oberon` | Oberon RISC Emulator |
+| `mu` | Palm OS (Mu) |
+| `same_cdi` | Philips - CDi (SAME CDi) |
+| `cdi2015` | Philips CDi (CDi 2015) |
+| `retro8` | PICO-8 (Retro8) |
+| `clownmdemu` | Sega - MD/CD (ClownMDEmu) |
+| `smsplus` | Sega - MS/GG (SMS Plus GX) |
+| `genesis_plus_gx_wide` | Sega - MS/GG/MD/CD (Genesis Plus GX Wide) |
+| `blastem` | Sega - MS/GG/MD/CD/32X (BlastEm) |
+| `gearsystem` | Sega - MS/GG/SG-1000 (Gearsystem) |
+| `mednafen_saturn` | Sega - Saturn (Beetle Saturn) |
+| `px68k` | Sharp - X68000 (PX68k) |
+| `x1` | Sharp X1 (X Millennium) |
+| `81` | Sinclair - ZX 81 (EightyOne) |
+| `fuse` | Sinclair - ZX Spectrum (Fuse) |
+| `geolith` | SNK - Neo Geo AES/MVS/CD (Geolith) |
+| `neocd` | SNK - Neo Geo CD (NeoCD) |
+| `race` | SNK - Neo Geo Pocket / Color (RACE) |
+| `numero` | Texas Instruments TI-83 (Numero) |
+| `theodore` | Thomson - MO/TO (Theodore) |
+| `uzem` | Uzebox (Uzem) |
+| `potator` | Watara - Supervision (Potator) |
 
 ## Install
 
 1. Make sure `websrv` is running.
-2. Unzip `RetroArch-PS5.zip` and copy the `RetroArch` folder to `homebrew/` on
-   internal storage or a USB drive, so you end up with one of:
+2. A release has two downloads, `RetroArch-PS5-engine.zip` (the frontend, menu
+   assets and databases) and `RetroArch-PS5-cores.zip` (the emulator cores).
+   Both contain a `RetroArch` folder: unzip them into the same place so they
+   merge, then copy the `RetroArch` folder to `homebrew/` on internal storage or
+   a USB drive, so you end up with one of:
 
    ```
    /data/homebrew/RetroArch
@@ -94,8 +178,8 @@ The core recipes live in `cores/`, grouped by how each core is built:
 
 | Path | Holds |
 |---|---|
-| `cores/typical/table.txt` | 18 cores built from upstream source as is - one row each: a repository, a makefile path, make arguments |
-| `cores/patched/<name>.sh` | 9 cores that need more: a source patch, a build assertion, an `.info` fixup, or a non-make build (`mgba` uses CMake) |
+| `cores/typical/table.txt` | 94 cores built from upstream source as is - one row each: a repository, a makefile path, make arguments |
+| `cores/patched/<name>.sh` | 14 cores that need more: a source patch, a build assertion, an `.info` fixup, or a non-make build (`mgba`, `applewin`, `arduous` and `dirksimple` use CMake) |
 | `cores/websrv/<name>.sh` | 7 cores whose scripts come from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch), kept close to the originals so upstream changes are easy to compare; local changes are marked in each script |
 | `cores/_common.sh` | shared fetch, cross-compile, verify and stage logic |
 | `cores/_matrix.py` | the core list as a build matrix for the release workflow |
@@ -146,15 +230,30 @@ The cores are **not** all under the same licence:
 
 | Core | Licence |
 |---|---|
-| `fceumm`, `nestopia`, `gambatte`, `mednafen_gba`, `mednafen_psx`, `mednafen_pce_fast`, `mednafen_vb`, `mednafen_wswan`, `mednafen_ngp`, `pcsx_rearmed`, `desmume2015`, `parallel_n64`, `yabause`, `stella2023`, `prosystem`, `puae`, `puae2021`, `vice_x64`, `dosbox_pure`, `prboom` | GPLv2 |
-| `virtualjaguar` | GPLv3 |
-| `mgba` | MPL 2.0 |
-| `handy` | Zlib |
+| `fceumm`, `nestopia`, `gambatte`, `mednafen_gba`, `mednafen_psx`, `mednafen_pce_fast`, `mednafen_vb`, `mednafen_wswan`, `mednafen_ngp`, `pcsx_rearmed`, `desmume2015`, `parallel_n64`, `yabause`, `stella2023`, `prosystem`, `puae`, `puae2021`, `vice_x64`, `dosbox_pure`, `prboom`, `a5200`, `applewin`, `atari800`, `bluemsx`, `cap32`, `dosbox_core`, `dosbox_svn`, `gpsp`, `hatari`, `mednafen_pce`, `mednafen_pcfx`, `mednafen_saturn`, `mednafen_supergrafx`, `numero`, `race`, `smsplus`, `stella`, `stella2014`, `tamalibretro`, `tgbdual`, `vba_next`, `vbam`, `vice_x128`, `vice_x64sc`, `vice_xcbm2`, `vice_xcbm5x0`, `vice_xpet`, `vice_xplus4`, `vice_xscpu64`, `vice_xvic` | GPLv2 |
+| `virtualjaguar`, `81`, `arduous`, `blastem`, `bsnes`, `bsnes_hd_beta`, `dice`, `emuscv`, `freechaf`, `fuse`, `gearboy`, `gearsystem`, `mesen`, `mesen-s`, `pokemini`, `retro8`, `theodore` | GPLv3 |
+| `mgba`, `squirreljme` | MPL 2.0 |
+| `handy`, `dirksimple`, `gw` | Zlib |
 | `opera` | LGPL / non-commercial |
-| `genesis_plus_gx`, `snes9x`, `snes9x2010`, `fbneo`, `fbalpha2012_cps1`, `fbalpha2012_cps2`, `fbalpha2012_neogeo` | Non-commercial |
-| `mame2003_plus`, `mame2010`, `picodrive` | MAME licence (non-commercial) |
+| `genesis_plus_gx`, `snes9x`, `snes9x2010`, `fbneo`, `fbalpha2012_cps1`, `fbalpha2012_cps2`, `fbalpha2012_neogeo`, `fbalpha2012`, `fbalpha2012_cps3`, `fmsx`, `genesis_plus_gx_wide`, `snes9x2002`, `snes9x2005`, `snes9x2005_plus` | Non-commercial |
+| `mame2003_plus`, `mame2010`, `picodrive`, `mame2000`, `mame2003` | MAME licence (non-commercial) |
+| `crocods`, `nekop2`, `np2kai`, `sameboy`, `uzem` | MIT |
+| `cdi2015`, `freeintv`, `mednafen_supafaust`, `same_cdi` | GPLv2+ |
+| `geolith`, `jollycv` | BSD-3-Clause, MIT |
+| `clownmdemu` | AGPLv3 |
+| `o2em` | Artistic License |
+| `x1` | BSD |
+| `quasi88` | BSD 3-Clause and MAME non-commercial |
+| `mu` | CC BY-NC 3.0 US (Non-commercial) |
+| `px68k` | Custom Non-Commercial |
+| `bk` | HPND |
+| `oberon` | ISC |
+| `quicknes` | LGPLv2.1+ |
+| `neocd` | LGPLv3 |
+| `potator` | Public Domain |
+| `mednafen_lynx` | Zlib / GPLv2 |
 
-No binaries are committed to this repository, but **the release zip does contain
+No binaries are committed to this repository, but **the release zips do contain
 them**, so those terms apply to the releases: the non-commercial cores may not be
 redistributed commercially, and MAME's licence has its own conditions. The GPLv2
 cores are built from the upstream sources named in `cores/typical/table.txt`,

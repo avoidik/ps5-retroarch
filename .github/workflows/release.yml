@@ -1,7 +1,8 @@
 name: release
 
 # Builds the whole payload from the recipes in this repository - patched SDL,
-# frontend, all cores, menu assets, databases - and publishes it as a single zip.
+# frontend, all cores, menu assets, databases - and publishes it as two zips: the
+# engine (frontend, assets, databases) and the cores, one matrix job per core.
 # Nothing generated is committed, so this workflow is the only source of releases.
 #
 # Builds are triggered by hand - pushing to master does not build anything.
@@ -22,6 +23,13 @@ on:
 
 permissions:
   contents: write
+
+# One release build at a time per ref. Two overlapping runs would race on
+# deleting and recreating the rolling "latest" release; a full run is long, so
+# a second dispatch queues rather than cancelling the one in flight.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   PS5_PAYLOAD_SDK: /opt/ps5-payload-sdk
@@ -53,11 +61,11 @@ jobs:
       - name: Install prerequisites
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          sudo apt-get update
+          sudo apt-get -o Acquire::Retries=5 update
           # llvm-18-dev is missing from the SDK's documented prerequisites. Without
           # llvm-config the compiler wrappers resolve to an empty path and every
           # build fails with "/llvm-clang++: No such file or directory".
-          sudo apt-get install -y --no-install-recommends \
+          sudo apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
             clang-18 lld-18 llvm-18 llvm-18-dev \
             build-essential cmake wget unzip pkg-config python3
 
@@ -104,8 +112,8 @@ jobs:
           fail-on-cache-miss: true
       - name: Install prerequisites
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          sudo apt-get -o Acquire::Retries=5 update
+          sudo apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
             clang-18 lld-18 llvm-18 llvm-18-dev build-essential cmake wget unzip \
             pkg-config python3
 
@@ -137,6 +145,8 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: frontend
+          # Intermediate: only the release assets are kept.
+          retention-days: 1
           path: |
             retroarch.elf
             retroarch.cfg
@@ -161,6 +171,10 @@ jobs:
   cores:
     needs: [sdk, plan]
     runs-on: ubuntu-24.04
+    # The slowest cores (MAME/FB Alpha derivatives) take well under an hour; a
+    # build still running after two has hung, and should not hold a runner for
+    # the six-hour default.
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -178,10 +192,18 @@ jobs:
           fail-on-cache-miss: true
       - name: Install prerequisites
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          sudo apt-get -o Acquire::Retries=5 update
+          sudo apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
             clang-18 lld-18 llvm-18 llvm-18-dev build-essential cmake wget unzip \
             pkg-config python3
+
+      - name: Retry downloads
+        # Every recipe fetches with wget - the websrv and standalone scripts
+        # directly - and one transient failure among this many jobs would block
+        # the release. ~/.wgetrc gives all of them retries without editing each.
+        run: |
+          printf '%s\n' 'tries = 5' 'waitretry = 10' 'retry_connrefused = on' \
+            'timeout = 60' > ~/.wgetrc
 
       - name: Build ${{ matrix.core }}
         run: |
@@ -214,6 +236,8 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: core-${{ matrix.core }}
+          # Intermediate: only the release assets are kept.
+          retention-days: 1
           path: .config/retroarch/cores/*_libretro.*
           if-no-files-found: error
 
@@ -222,9 +246,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - run: sudo apt-get update && sudo apt-get install -y wget
+      - run: sudo apt-get -o Acquire::Retries=5 update && sudo apt-get -o Acquire::Retries=5 install -y wget
       - name: Fetch menu assets and databases
         run: |
+          printf '%s\n' 'tries = 5' 'waitretry = 10' 'retry_connrefused = on' \
+            'timeout = 60' > ~/.wgetrc
           chmod +x fetch-assets.sh fetch-databases.sh
           ./fetch-assets.sh
           ./fetch-databases.sh
@@ -232,6 +258,8 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: content
+          # Intermediate: only the release assets are kept.
+          retention-days: 1
           path: .config/retroarch/
           if-no-files-found: error
 
@@ -242,74 +270,88 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Two release assets, both rooted at RetroArch/ so they unzip into the same
+      # folder: the engine (frontend, menu assets, databases) and the cores.
+      # Updating only the cores, or only the frontend, means replacing one zip.
       - name: Collect the frontend
         uses: actions/download-artifact@v8
         with:
           name: frontend
-          path: dist/RetroArch
+          path: dist/engine/RetroArch
+
+      - name: Collect assets and databases
+        uses: actions/download-artifact@v8
+        with:
+          name: content
+          path: dist/engine/RetroArch/.config/retroarch
 
       - name: Collect the cores
         uses: actions/download-artifact@v8
         with:
           pattern: core-*
           merge-multiple: true
-          path: dist/RetroArch/.config/retroarch/cores
+          path: dist/cores/RetroArch/.config/retroarch/cores
 
-      - name: Collect assets and databases
-        uses: actions/download-artifact@v8
-        with:
-          name: content
-          path: dist/RetroArch/.config/retroarch
-
-      - name: Assemble the payload
+      - name: Assemble the engine
         run: |
-          cd dist/RetroArch
-          cp ../../homebrew.js .
-          cp ../../README.md ../../LICENSE .
-          # RetroArch needs this to exist for BIOS files; git cannot carry an
-          # empty directory, so create it here.
+          cd dist/engine/RetroArch
+          cp ../../../homebrew.js .
+          cp ../../../README.md ../../../LICENSE .
+          # RetroArch needs these to exist for BIOS files and ROMs; git cannot
+          # carry an empty directory, so create them here.
           mkdir -p .config/retroarch/system .config/retroarch/roms
           touch .config/retroarch/system/.keep .config/retroarch/roms/.keep
           chmod +x retroarch.elf
-          echo "=== payload contents ==="
+          echo "=== engine contents ==="
           ls -l
-          echo "cores: $(find .config/retroarch/cores -maxdepth 1 -name "*.so" | wc -l)"
           du -sh .
 
-      - name: Sanity-check the payload before publishing
+      - name: Sanity-check both payloads before publishing
         env:
           EXPECTED: ${{ needs.plan.outputs.count }}
         run: |
-          cd dist/RetroArch
           set -e
+          cd dist/engine/RetroArch
           for f in retroarch.elf retroarch.cfg homebrew.js sce_sys/icon0.png; do
             test -f "$f" || { echo "missing $f"; exit 1; }
           done
           test -d .config/retroarch/assets
           test -d .config/retroarch/database
+          # The engine must not carry cores, or the two zips would overlap.
+          test ! -d .config/retroarch/cores
+          cd ../../cores/RetroArch
           n=$(find .config/retroarch/cores -maxdepth 1 -name "*.so" | wc -l)
+          i=$(find .config/retroarch/cores -maxdepth 1 -name "*.info" | wc -l)
           [ "$n" -ge "$EXPECTED" ] || { echo "only $n cores, expected $EXPECTED"; exit 1; }
-          echo "ok: $n cores, payload complete"
+          [ "$i" -ge "$n" ] || { echo "$n cores but only $i .info files"; exit 1; }
+          echo "ok: engine complete, $n cores"
 
-      - name: Create the zip
+      - name: Create the zips
         run: |
-          cd dist
-          zip -qr9 ../RetroArch-PS5.zip RetroArch
-          cd ..
-          ls -l RetroArch-PS5.zip
-          echo "sha256: $(sha256sum RetroArch-PS5.zip | cut -d' ' -f1)"
+          set -e
+          (cd dist/engine && zip -qr9 ../../RetroArch-PS5-engine.zip RetroArch)
+          (cd dist/cores && zip -qr9 ../../RetroArch-PS5-cores.zip RetroArch)
+          ls -l RetroArch-PS5-*.zip
+          sha256sum RetroArch-PS5-*.zip
 
       - uses: actions/upload-artifact@v7
         with:
-          name: RetroArch-PS5
-          path: RetroArch-PS5.zip
+          name: RetroArch-PS5-engine
+          path: RetroArch-PS5-engine.zip
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: RetroArch-PS5-cores
+          path: RetroArch-PS5-cores.zip
+          if-no-files-found: error
 
       # Every successful build publishes something downloadable:
       #   v* tag, or a manual run given a tag -> a versioned release
       #   a manual run with the tag left empty -> a rolling "latest" prerelease
-      # The rolling one is deleted and recreated so its tag and asset always point
-      # at the commit that produced them; the GitHub API will not move an existing
-      # tag on its own.
+      # The rolling one is deleted and recreated so its tag and assets always
+      # point at the commit that produced them; the GitHub API will not move an
+      # existing tag on its own.
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -317,7 +359,8 @@ jobs:
           CORE_COUNT: ${{ needs.plan.outputs.count }}
         run: |
           set -e
-          SHA256=$(sha256sum RetroArch-PS5.zip | cut -d' ' -f1)
+          SHA_ENGINE=$(sha256sum RetroArch-PS5-engine.zip | cut -d' ' -f1)
+          SHA_CORES=$(sha256sum RetroArch-PS5-cores.zip | cut -d' ' -f1)
 
           if [ -n "$INPUT_TAG" ]; then
             TAG="$INPUT_TAG"
@@ -335,27 +378,32 @@ jobs:
           fi
 
           cat > notes.md <<EOF
-          Unzip and copy the \`RetroArch\` folder to \`homebrew/RetroArch\` on
-          internal storage or a USB drive, then launch it from the Homebrew
-          Launcher. ROMs go in \`.config/retroarch/roms\`, BIOS files in
-          \`.config/retroarch/system\`.
+          Two downloads, both containing a \`RetroArch\` folder:
 
-          Includes the frontend, $CORE_COUNT cores, menu assets and databases.
+          - **RetroArch-PS5-engine.zip** - the frontend, menu assets and databases.
+          - **RetroArch-PS5-cores.zip** - $CORE_COUNT emulator cores.
+
+          Unzip both into the same place, so the cores land in the engine's
+          \`RetroArch/.config/retroarch/cores\`, then copy the \`RetroArch\` folder
+          to \`homebrew/RetroArch\` on internal storage or a USB drive and launch it
+          from the Homebrew Launcher. To update only the cores or only the engine,
+          replace just that part. ROMs go in \`.config/retroarch/roms\`, BIOS files
+          in \`.config/retroarch/system\`.
 
           \`\`\`
-          RetroArch-PS5.zip
-          sha256 $SHA256
+          RetroArch-PS5-engine.zip  sha256 $SHA_ENGINE
+          RetroArch-PS5-cores.zip   sha256 $SHA_CORES
           built from ${GITHUB_SHA}
           \`\`\`
 
           The PS5 port of RetroArch is John Tornblom's, from
           [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv).
-          Core licences vary - see the README; Genesis Plus GX, both Snes9x cores,
-          the FB Alpha/FB Neo cores and the MAME-licensed ones (mame2003_plus,
-          mame2010, picodrive) are non-commercial.
+          Core licences vary and several cores are non-commercial (among them the
+          MAME-derived, FB Alpha/FB Neo, Snes9x and Genesis Plus GX cores) - see
+          the README for each core's licence.
           EOF
 
-          gh release create "$TAG" RetroArch-PS5.zip \
+          gh release create "$TAG" RetroArch-PS5-engine.zip RetroArch-PS5-cores.zip \
             --target "${GITHUB_SHA}" \
             --title "$TITLE" \
             --notes-file notes.md \

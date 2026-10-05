@@ -18,14 +18,22 @@
 #
 # Variables:
 #   CORE           core name; also names the .so and the .info     (required)
-#   REPO           GitHub owner/repo to build from                 (required)
+#   REPO           GitHub owner/repo, or gitlab.com/owner/repo     (required)
 #   BRANCH         branch to fetch                                (default master)
-#   FETCH          "tarball", or "git" for a core with submodules  (default tarball)
+#   FETCH          "tarball", or "git" to clone       (default tarball; a source
+#                  tree with a .gitmodules is re-fetched with git automatically)
 #   MAKE_DIR       directory holding the libretro makefile         (default .)
 #   MAKEFILE       makefile name                                   (default Makefile)
 #   SO             expected output                       (default ${CORE}_libretro.so)
 #   EXTRA_DEFINES  appended to CC and CXX
 #   MAKE_ARGS      array of extra make arguments
+#
+# CMake cores call build_cmake_libretro_core instead, which takes the same
+# CORE, REPO, BRANCH, FETCH, SO and EXTRA_DEFINES, plus:
+#   CMAKE_DIR      directory holding CMakeLists.txt, relative to the source root
+#                  (default .)
+#   CMAKE_ARGS     array of extra -D options
+#   CMAKE_TARGET   target to build                     (default ${CORE}_libretro)
 #
 # Optional hooks a recipe may define:
 #   core_pre_build          called in the source root, before make - for source
@@ -45,6 +53,22 @@ source "${PS5_PAYLOAD_SDK}/toolchain/prospero.sh" || {
 # This file lives in cores/; everything stages into the payload root above it.
 CORES_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 ROOT_DIR="$(dirname "$CORES_DIR")"
+
+# A release builds every core in its own CI job, so one transient network error
+# in hundreds of downloads would fail a core and block the release. Retry.
+WGET=(wget --tries=5 --waitretry=10 --retry-connrefused --timeout=60)
+
+# git has no retry option of its own.
+git_clone_retry() {
+    local attempt dest="${*: -1}"
+    for attempt in 1 2 3; do
+        git clone "$@" && return 0
+        echo "git clone failed (attempt $attempt); retrying"
+        rm -rf -- "$dest"
+        sleep $((attempt * 10))
+    done
+    return 1
+}
 
 # Linking is not loading. These three checks are what separates "the makefile
 # produced a file" from "RetroArch on the console can dlopen it".
@@ -81,50 +105,58 @@ verify_libretro_so() {
     fi
 }
 
-build_libretro_core() {
+# Fetch REPO at BRANCH into a fresh temporary directory. Sets TEMPDIR (removed
+# on exit) and SRC (the source root).
+fetch_core_source() {
     local core="${CORE:?CORE is not set}"
     local repo="${REPO:?REPO is not set}"
     local branch="${BRANCH:-master}"
     local fetch="${FETCH:-tarball}"
-    local make_dir="${MAKE_DIR:-.}"
-    local makefile="${MAKEFILE:-Makefile}"
-    local so="${SO:-${core}_libretro.so}"
-    local info="${core}_libretro.info"
-    local stage="${ROOT_DIR}/.config/retroarch/cores"
-    local tempdir src out
+    local host="github.com" path="$repo" archive
 
-    tempdir=$(mktemp -d) || return 1
-    trap 'rm -rf -- "$tempdir"' EXIT
+    # REPO is owner/repo on GitHub unless it names its host.
+    if [[ "$repo" == gitlab.com/* ]]; then
+        host="gitlab.com"
+        path="${repo#gitlab.com/}"
+    fi
 
-    if [[ "$fetch" == "git" ]]; then
-        # GitHub's archives omit submodules, so a core that has them has to be
-        # cloned.
-        git clone --depth 1 --recursive --branch "$branch" \
-            "https://github.com/${repo}" "$tempdir/$core" || return 1
-        src="$tempdir/$core"
-    else
-        wget -O "$tempdir/$core.tar.gz" \
-            "https://github.com/${repo}/archive/refs/heads/${branch}.tar.gz" || return 1
-        tar xf "$tempdir/$core.tar.gz" -C "$tempdir" || return 1
+    TEMPDIR=$(mktemp -d) || return 1
+    trap 'rm -rf -- "$TEMPDIR"' EXIT
+
+    if [[ "$fetch" != "git" ]]; then
+        if [[ "$host" == "gitlab.com" ]]; then
+            archive="https://gitlab.com/${path}/-/archive/${branch}/${path##*/}-${branch}.tar.gz"
+        else
+            archive="https://github.com/${path}/archive/refs/heads/${branch}.tar.gz"
+        fi
+        "${WGET[@]}" -O "$TEMPDIR/$core.tar.gz" "$archive" || return 1
+        tar xf "$TEMPDIR/$core.tar.gz" -C "$TEMPDIR" || return 1
+        rm -f "$TEMPDIR/$core.tar.gz"
         # The extracted directory is named after the repo and branch, neither of
         # which need match the core name, so find it instead of assuming.
-        src=$(find "$tempdir" -mindepth 1 -maxdepth 1 -type d | head -n1)
-        if [[ -z "$src" ]]; then
+        SRC=$(find "$TEMPDIR" -mindepth 1 -maxdepth 1 -type d | head -n1)
+        if [[ -z "$SRC" ]]; then
             echo "error: $core: the archive extracted no source directory"
             return 1
         fi
+        # Archives omit submodules. Rather than make every recipe know which
+        # cores have them, fall back to a clone whenever the tree says so.
+        if [[ -s "$SRC/.gitmodules" ]]; then
+            echo "$core: source has submodules; cloning instead"
+            rm -rf "$SRC"
+            fetch=git
+        fi
     fi
 
-    if declare -F core_pre_build >/dev/null; then
-        ( cd "$src" && core_pre_build ) || return 1
+    if [[ "$fetch" == "git" ]]; then
+        git_clone_retry --depth 1 --recursive --shallow-submodules --branch "$branch" \
+            "https://${host}/${path}.git" "$TEMPDIR/$core" || return 1
+        SRC="$TEMPDIR/$core"
     fi
+}
 
-    # platform=unix keeps the libretro makefiles on their .so/-fPIC path.
-    #
-    # The toolchain goes on the command line as make *variables*, not just in
-    # the environment, so it also overrides makefiles that hardcode `CC = gcc`
-    # in their unix branch - those otherwise build a host Linux object.
-    #
+# The compiler flags every core gets, for CC/CXX or CMAKE_C(XX)_FLAGS.
+core_defines() {
     # -DCLOCK_REALTIME=0 -DCLOCK_MONOTONIC=4: the SDK's time.h only defines the
     # clock ids when __POSIX_VISIBLE >= 200112, which -std=c99 (__STRICT_ANSI__)
     # suppresses, so anything using libretro-common/rthreads fails to compile.
@@ -135,8 +167,6 @@ build_libretro_core() {
     # `#if !defined(CLOCK_REALTIME) && __POSIX_VISIBLE >= 200112`, so defining
     # CLOCK_REALTIME alone also hides CLOCK_MONOTONIC - which is how
     # libretro-common/features/features_cpu.c breaks with only the first.
-    #
-    # HAVE_CDROM=0: libretro-common/cdrom has no PS5 ioctl path.
     #
     # -include ps5-pthread-np.h: libretro-common's rthreads.c calls
     # pthread_set_name_np() on __FreeBSD__ without including <pthread_np.h>.
@@ -155,8 +185,85 @@ build_libretro_core() {
     local defines="-DCLOCK_REALTIME=0 -DCLOCK_MONOTONIC=4"
     defines+=" -include${ROOT_DIR}/shims/ps5-pthread-np.h"
     defines+=" -Wno-unused-command-line-argument ${EXTRA_DEFINES:-}"
+    echo "$defines"
+}
+
+# Verify a built core, fetch its .info and stage both. $1 is the built .so.
+stage_core() {
+    local core="${CORE:?CORE is not set}"
+    local so="${SO:-${core}_libretro.so}"
+    local info="${core}_libretro.info"
+    local stage="${ROOT_DIR}/.config/retroarch/cores"
+    local out="$1"
+
+    verify_libretro_so "$out" || return 1
+
+    if declare -F core_post_build >/dev/null; then
+        ( cd "$(dirname "$out")" && core_post_build "$out" ) || return 1
+    fi
+
+    "${WGET[@]}" -O "$TEMPDIR/$info" \
+        "https://raw.githubusercontent.com/libretro/libretro-core-info/refs/heads/master/${info}" \
+        || return 1
+
+    if declare -F core_post_info >/dev/null; then
+        core_post_info "$TEMPDIR/$info" || return 1
+    fi
+
+    # A core that wants a hardware GL context cannot run on this build at all -
+    # the frontend renders through SDL2's software framebuffer.
+    if grep -q 'hw_render[[:space:]]*=[[:space:]]*"true"' "$TEMPDIR/$info"; then
+        echo "error: $core declares hw_render = true; this build has no GL context"
+        return 1
+    fi
+
+    mkdir -p "$stage" || return 1
+    mv "$out" "$stage/$so" || return 1
+    mv "$TEMPDIR/$info" "$stage/$info" || return 1
+
+    echo "staged $so ($(stat -c%s "$stage/$so") bytes)"
+}
+
+# Find the built .so: in the make directory, or anywhere under $1 (some
+# makefiles write to an out/ or build/ subdirectory).
+find_core_output() {
+    local dir="$1" so="$2" out
+    out="$dir/$so"
+    if [[ ! -f "$out" ]]; then
+        out=$(find "$SRC" -name "$so" -type f | head -n1)
+    fi
+    if [[ -z "$out" || ! -f "$out" ]]; then
+        echo "error: ${CORE}: $so was not produced" >&2
+        return 1
+    fi
+    echo "$out"
+}
+
+build_libretro_core() {
+    local core="${CORE:?CORE is not set}"
+    local make_dir="${MAKE_DIR:-.}"
+    local makefile="${MAKEFILE:-Makefile}"
+    local so="${SO:-${core}_libretro.so}"
+    local defines out
+
+    fetch_core_source || return 1
+
+    if declare -F core_pre_build >/dev/null; then
+        ( cd "$SRC" && core_pre_build ) || return 1
+    fi
+
+    # platform=unix keeps the libretro makefiles on their .so/-fPIC path.
+    #
+    # The toolchain goes on the command line as make *variables*, not just in
+    # the environment, so it also overrides makefiles that hardcode `CC = gcc`
+    # in their unix branch - those otherwise build a host Linux object.
+    #
+    # HAVE_CDROM=0: libretro-common/cdrom has no PS5 ioctl path.
+    #
+    # MAKE_ARGS come last so a recipe can override any of these.
+    defines=$(core_defines)
     (
-        cd "$src/$make_dir" || exit 1
+        cd "$SRC/$make_dir" || exit 1
         "$MAKE" -f "$makefile" \
                 platform=unix \
                 DEBUG=0 \
@@ -170,36 +277,35 @@ build_libretro_core() {
                 "${MAKE_ARGS[@]}"
     ) || return 1
 
-    out="$src/$make_dir/$so"
-    if [[ ! -f "$out" ]]; then
-        echo "error: $core: $so was not produced"
-        return 1
+    out=$(find_core_output "$SRC/$make_dir" "$so") || return 1
+    stage_core "$out"
+}
+
+# CMake counterpart of build_libretro_core, through the SDK's toolchain file
+# (prospero-cmake). The flags go in CMAKE_C_FLAGS/CMAKE_CXX_FLAGS, which the
+# project appends to rather than replaces.
+build_cmake_libretro_core() {
+    local core="${CORE:?CORE is not set}"
+    local cmake_dir="${CMAKE_DIR:-.}"
+    local target="${CMAKE_TARGET:-${core}_libretro}"
+    local so="${SO:-${core}_libretro.so}"
+    local defines out
+
+    fetch_core_source || return 1
+
+    if declare -F core_pre_build >/dev/null; then
+        ( cd "$SRC" && core_pre_build ) || return 1
     fi
 
-    verify_libretro_so "$out" || return 1
+    defines=$(core_defines)
+    "$CMAKE" -S "$SRC/$cmake_dir" -B "$SRC/build-ps5" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_C_FLAGS="$defines" \
+        -DCMAKE_CXX_FLAGS="$defines" \
+        "${CMAKE_ARGS[@]}" || return 1
 
-    if declare -F core_post_build >/dev/null; then
-        ( cd "$src/$make_dir" && core_post_build "$out" ) || return 1
-    fi
+    "$CMAKE" --build "$SRC/build-ps5" --target "$target" -j"$(nproc)" || return 1
 
-    wget -O "$tempdir/$info" \
-        "https://raw.githubusercontent.com/libretro/libretro-core-info/refs/heads/master/${info}" \
-        || return 1
-
-    if declare -F core_post_info >/dev/null; then
-        core_post_info "$tempdir/$info" || return 1
-    fi
-
-    # A core that wants a hardware GL context cannot run on this build at all -
-    # the frontend renders through SDL2's software framebuffer.
-    if grep -q 'hw_render[[:space:]]*=[[:space:]]*"true"' "$tempdir/$info"; then
-        echo "error: $core declares hw_render = true; this build has no GL context"
-        return 1
-    fi
-
-    mkdir -p "$stage" || return 1
-    mv "$out" "$stage/$so" || return 1
-    mv "$tempdir/$info" "$stage/$info" || return 1
-
-    echo "staged $so ($(stat -c%s "$stage/$so") bytes)"
+    out=$(find_core_output "$SRC/build-ps5" "$so") || return 1
+    stage_core "$out"
 }
