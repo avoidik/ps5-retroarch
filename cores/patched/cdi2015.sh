@@ -23,6 +23,13 @@ core_pre_build() {
         echo "error: failed to drop the allocation macros from $f"
         return 1
     fi
+    # The makefile links GCC's -lstdc++; the SDK's C++ runtime is libc++, which
+    # prospero-clang++ already links.
+    sed -i 's| -lstdc++||g' Makefile
+    if grep -q -- '-lstdc++' Makefile; then
+        echo "error: failed to drop -lstdc++ from the Makefile"
+        return 1
+    fi
 }
 
 # The retro OSD's file and directory code uses glibc's large-file names

@@ -188,6 +188,9 @@ core_defines() {
     # `#if !defined(CLOCK_REALTIME) && __POSIX_VISIBLE >= 200112`, so defining
     # CLOCK_REALTIME alone also hides CLOCK_MONOTONIC - which is how
     # libretro-common/features/features_cpu.c breaks with only the first.
+    # For the same reason the other POSIX clock ids in that block are defined
+    # too (FLAC's microbench uses CLOCK_PROCESS_CPUTIME_ID); the FreeBSD-only
+    # ones (CLOCK_UPTIME, CLOCK_SECOND, ...) are left out.
     #
     # -include ps5-pthread-np.h: libretro-common's rthreads.c calls
     # pthread_set_name_np() on __FreeBSD__ without including <pthread_np.h>.
@@ -216,6 +219,7 @@ core_defines() {
     # -Wno-register: C++17 removed the `register` keyword and clang rejects it
     # in C++ (81's compat.cpp); compilers ignore it anyway.
     local defines="-DCLOCK_REALTIME=0 -DCLOCK_MONOTONIC=4"
+    defines+=" -DCLOCK_THREAD_CPUTIME_ID=14 -DCLOCK_PROCESS_CPUTIME_ID=15"
     defines+=" -I${ROOT_DIR}/shims/include"
     defines+=" -include${ROOT_DIR}/shims/ps5-pthread-np.h"
     defines+=" -Wno-error=incompatible-function-pointer-types"

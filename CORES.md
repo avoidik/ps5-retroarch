@@ -246,6 +246,10 @@ explain most of the per-core scripts:
   `shims/ps5-pthread-np.h` supplies just that prototype (the function itself is
   exported by `libkernel_web.sprx`). `_common.sh` force-includes it for every
   core it builds; `pcsx_rearmed` and `snes9x2010` add it themselves.
+  `_common.sh` predefines `CLOCK_REALTIME`, `CLOCK_MONOTONIC`,
+  `CLOCK_THREAD_CPUTIME_ID` and `CLOCK_PROCESS_CPUTIME_ID` with the header's
+  values: `time.h` defines all clock ids in one block that strict POSIX levels
+  hide, and predefining any of them hides the rest.
   `snes9x2010` also takes `_common.sh`'s `CLOCK_REALTIME`/`CLOCK_MONOTONIC`
   defines, because its `rthreads.c` pins `_POSIX_C_SOURCE 199309`, which hides
   them. That makes it the one websrv script with a compiler-flag change.
@@ -266,7 +270,8 @@ explain most of the per-core scripts:
   (C++17 dropped `register`; `81`). `cdi2015` drops MAME 2015's
   `malloc`/`realloc` macros, which break libc++'s own headers, and builds with
   `SDLMAME_NO64BITIO` and `NO_AFFINITY_NP` (glibc's `stat64`/`readdir64` and
-  `cpu_set_t`, as in `mame2010`), and
+  `cpu_set_t`, as in `mame2010`), links libc++ instead of the makefile's
+  `-lstdc++`, and
   `mednafen_supafaust` turns off its glibc-only CPU-affinity code.
 - **Bundled dependencies built with autoconf** need to be told they are
   cross-compiling: `dosbox_core` and `dosbox_svn` pass
