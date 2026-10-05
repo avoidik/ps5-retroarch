@@ -212,10 +212,14 @@ core_defines() {
     # cores (bluemsx's ROM mappers) pass handlers taking a typed pointer where
     # void * is expected. The calling convention is the same, so it stays a
     # warning. Undeclared functions stay errors: those do break at run time.
+    #
+    # -Wno-register: C++17 removed the `register` keyword and clang rejects it
+    # in C++ (81's compat.cpp); compilers ignore it anyway.
     local defines="-DCLOCK_REALTIME=0 -DCLOCK_MONOTONIC=4"
     defines+=" -I${ROOT_DIR}/shims/include"
     defines+=" -include${ROOT_DIR}/shims/ps5-pthread-np.h"
     defines+=" -Wno-error=incompatible-function-pointer-types"
+    defines+=" -Wno-register"
     defines+=" -Wno-unused-command-line-argument ${EXTRA_DEFINES:-}"
     echo "$defines"
 }

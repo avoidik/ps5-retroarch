@@ -10,7 +10,7 @@ described at the end to refresh them.
 
 | Item | Value |
 |---|---|
-| Cores shipped | **115**: 89 typical (`cores/typical/table.txt`), 19 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
+| Cores shipped | **115**: 88 typical (`cores/typical/table.txt`), 20 patched (`cores/patched/`), 7 from websrv (`cores/websrv/`) |
 | Added on 2026-10-05 | 81 software-rendered emulators, not yet built in CI at the time of writing (see [Emulators added on 2026-10-05](#emulators-added-on-2026-10-05)) |
 | Official Linux x86_64 cores | 244, of which all 115 shipped here are part |
 | Missing from the official set | 129 - see [Coverage](#coverage-against-the-official-distribution) |
@@ -24,8 +24,8 @@ Every core is defined in exactly one of three places under `cores/`;
 
 | Category | Location | Cores | What it means |
 |---|---|---|---|
-| typical | `typical/table.txt` | 89 | Upstream source built as is with the shared flags in `_common.sh`: one row naming a repository, makefile path and make arguments. |
-| patched | `patched/<name>.sh` | 19 | Needs a source patch, a build assertion, an `.info` fixup or a non-make build. `parallel_n64`, `picodrive`, `prboom`, `mame2003`, `bsnes_hd_beta` and `same_cdi` use `_common.sh`'s make build with hooks (`core_pre_build` patches the makefile for the last four), and `cdi2015` puts the C++ compiler back in `CC`; `bsnes` and `bsnes_hd_beta` pass the toolchain through nall's own `compiler` variable; `mgba`, `applewin`, `arduous`, `dirksimple`, `hatari` and `squirreljme` use `_common.sh`'s CMake build (`build_cmake_libretro_core`); the other five fetch and build on their own. |
+| typical | `typical/table.txt` | 88 | Upstream source built as is with the shared flags in `_common.sh`: one row naming a repository, makefile path and make arguments. |
+| patched | `patched/<name>.sh` | 20 | Needs a source patch, a build assertion, an `.info` fixup or a non-make build. `parallel_n64`, `picodrive`, `prboom`, `mame2003`, `bsnes_hd_beta`, `same_cdi`, `mednafen_supafaust` and `cdi2015` use `_common.sh`'s make build with hooks (`core_pre_build` patches the makefile or a header for the last six; `cdi2015` also puts the C++ compiler back in `CC`); `bsnes` and `bsnes_hd_beta` pass the toolchain through nall's own `compiler` variable; `mgba`, `applewin`, `arduous`, `dirksimple`, `hatari` and `squirreljme` use `_common.sh`'s CMake build (`build_cmake_libretro_core`); the other five fetch and build on their own. |
 | websrv | `websrv/<name>.sh` | 7 | Taken from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch) (`build-<name>.sh` there), changed as little as possible so upstream changes can be compared directly: the staging path everywhere, plus the compiler flags in `snes9x2010` (see below). `puae2021`'s `key_t` patch is websrv's own. |
 
 The websrv and standalone patched scripts do not use `_common.sh`, so they skip
@@ -185,7 +185,7 @@ when they were added, so the first CI runs decide which need more work.
 | `mesen` | Nintendo - NES / Famicom (Mesen) | libretro/Mesen | master | typical | GPLv3 |
 | `quicknes` | Nintendo - NES / Famicom (QuickNES) | libretro/QuickNES_Core | master | typical | LGPLv2.1+ |
 | `pokemini` | Nintendo - Pokemon Mini (PokeMini) | libretro/PokeMini | master | typical | GPLv3 |
-| `mednafen_supafaust` | Nintendo - SNES / SFC (Beetle Supafaust) | libretro/supafaust | master | typical | GPLv2+ |
+| `mednafen_supafaust` | Nintendo - SNES / SFC (Beetle Supafaust) | libretro/supafaust | master | patched | GPLv2+ |
 | `bsnes` | Nintendo - SNES / SFC (bsnes) | libretro/bsnes-libretro | master | patched | GPLv3 |
 | `bsnes_hd_beta` | Nintendo - SNES / SFC (bsnes-hd beta) | DerKoun/bsnes-hd | master | patched | GPLv3 |
 | `snes9x2002` | Nintendo - SNES / SFC (Snes9x 2002) | libretro/snes9x2002 | master | typical | Non-commercial |
@@ -262,6 +262,15 @@ explain most of the per-core scripts:
   makefile fixes. `shims/include/` also has an `endian.h` with glibc's
   `__BYTE_ORDER` names (`mesen`) and an empty `sys/io.h` (`emuscv` includes the
   x86 port-I/O header without using it).
+- **Clang 18 / libc++ 18 strictness.** `_common.sh` also passes `-Wno-register`
+  (C++17 dropped `register`; `81`). `cdi2015` drops MAME 2015's
+  `malloc`/`realloc` macros, which break libc++'s own headers, and
+  `mednafen_supafaust` turns off its glibc-only CPU-affinity code.
+- **Bundled dependencies built with autoconf** need to be told they are
+  cross-compiling: `dosbox_core` and `dosbox_svn` pass
+  `TARGET_TRIPLET=x86_64-unknown-freebsd` (their makefiles hand it to
+  `configure --host`), and the CI runners install autoconf, automake and
+  libtool for the dependencies that run `autogen.sh`.
 - **The SDK environment exports `DESTDIR`** (its sysroot) for its own library
   builds. `_common.sh` unsets it, or a core that `make install`s its bundled
   dependencies into its own tree (`dosbox_core`) has them re-rooted into the

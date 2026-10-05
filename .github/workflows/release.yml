@@ -195,7 +195,9 @@ jobs:
           sudo apt-get -o Acquire::Retries=5 update
           sudo apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
             clang-18 lld-18 llvm-18 llvm-18-dev build-essential cmake wget unzip \
-            pkg-config python3
+            pkg-config python3 autoconf automake libtool
+        # autoconf/automake/libtool: cores that build bundled dependencies run
+        # their autogen.sh (dosbox_core's FLAC).
 
       - name: Retry downloads
         # Every recipe fetches with wget - the websrv and standalone scripts

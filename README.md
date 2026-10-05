@@ -178,8 +178,8 @@ The core recipes live in `cores/`, grouped by how each core is built:
 
 | Path | Holds |
 |---|---|
-| `cores/typical/table.txt` | 89 cores built from upstream source as is - one row each: a repository, a makefile path, make arguments |
-| `cores/patched/<name>.sh` | 19 cores that need more: a source patch, a build assertion, an `.info` fixup, or a non-make build (`mgba`, `applewin`, `arduous`, `dirksimple`, `hatari` and `squirreljme` use CMake) |
+| `cores/typical/table.txt` | 88 cores built from upstream source as is - one row each: a repository, a makefile path, make arguments |
+| `cores/patched/<name>.sh` | 20 cores that need more: a source patch, a build assertion, an `.info` fixup, or a non-make build (`mgba`, `applewin`, `arduous`, `dirksimple`, `hatari` and `squirreljme` use CMake) |
 | `cores/websrv/<name>.sh` | 7 cores whose scripts come from [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv/tree/master/homebrew/RetroArch), kept close to the originals so upstream changes are easy to compare; local changes are marked in each script |
 | `cores/_common.sh` | shared fetch, cross-compile, verify and stage logic |
 | `cores/_matrix.py` | the core list as a build matrix for the release workflow |
